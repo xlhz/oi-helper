@@ -32,7 +32,7 @@ core/build/oi-judge.exe --problem problems/P1001 --pretty
 评测单个源文件：
 
 ```powershell
-core/build/oi-judge.exe --src a.cpp --in 1.in --out 1.out --time 1000 --memory 256
+core/build/oi-judge.exe --src problems/ICPC1/A/a.cpp --in problems/ICPC1/A/1.in --out problems/ICPC1/A/1.out --time 1000 --memory 256
 ```
 
 ## CLI 参数
@@ -225,7 +225,7 @@ core/build/oi-judge.exe --serve 8899
 ## 已知限制
 
 - 本机无 `isolate` 时，`--env wsl` 会降级为 Windows Job Object 受限模式，结果里 `isolationDegraded=true`。
-- 默认 `--env auto`（以及不传 `--env`）会优先探测 WSL + isolate，该探测有 3 秒超时上限；探测超时（例如本机 `wsl.exe` 无响应）或失败时自动降级到 MinGW + Windows Job Object 运行，此时结果里 `isolationDegraded=true`；若要跳过探测可直接指定 `--env mingw`。
+- 默认 `--env auto`（以及不传 `--env`）会优先探测 WSL + isolate，该探测有 3 秒超时上限；探测超时（例如本机 `wsl.exe` 无响应）或失败时回退到 MinGW + Windows Job Object 运行，这是正常回退，结果里 `isolationDegraded` 仍为 `false`；只有显式指定 `--env wsl` 而 WSL 不可用时才算降级，此时 `isolationDegraded` 为 `true`；由于探测需等满超时，默认路径比 `--env mingw` 慢约 3 秒，想跳过探测可直接指定 `--env mingw`。
 - Windows 上 MinGW 程序冷启动 wall 约 1s，故 wall 等待 = 时限 + 3000ms 宽限，超时以 CPU 时间判定并容忍 200ms 启动开销。
 - 通信题为简化实现，仅支持 2 个源文件。
 
