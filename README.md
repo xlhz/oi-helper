@@ -150,7 +150,7 @@ core/build/oi-judge.exe --src problems/ICPC1/A/a.cpp --in problems/ICPC1/A/1.in 
 
 | 配置项 | 默认 | 说明 |
 |---|---|---|
-| `oiHelper.judgePath` | `d:\OIHelpper\core\build\oi-judge.exe` | `oi-judge` 路径; 留空则在 workspace 下查找 `core/build/oi-judge(.exe)` |
+| `oiHelper.judgePath` | 空 | `oi-judge` 路径; 留空则在当前工作区下查找 `core/build/oi-judge(.exe)`; 多个工作区共用同一份时可在用户设置里填写绝对路径 |
 | `oiHelper.xmojUser` | 空 | xmoj 账号, 用于抓取需要登录的题目 |
 | `oiHelper.xmojPassword` | 空 | xmoj 密码, 明文保存, 仅本机使用 |
 | `oiHelper.env` | auto | 编译运行环境 |

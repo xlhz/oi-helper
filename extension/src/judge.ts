@@ -56,15 +56,11 @@ export interface JudgeOptions {
     format?: string;
 }
 
-// 固定默认路径: 便于跨工作区使用
-export const DEFAULT_JUDGE_PATH = 'd:\\OIHelpper\\core\\build\\oi-judge.exe';
-
-// 定位 oi-judge: 配置优先, 其次固定默认路径, 最后 workspace 下 core/build/
+// 定位 oi-judge: 配置优先, 其次 workspace 下 core/build/
 export function resolveJudgePath(): string | undefined {
-    const configured = vscode.workspace.getConfiguration('oiHelper').get<string>('judgePath');
-    const fixed = configured && configured.trim() ? configured.trim() : DEFAULT_JUDGE_PATH;
-    if (fs.existsSync(fixed)) {
-        return fixed;
+    const configured = (vscode.workspace.getConfiguration('oiHelper').get<string>('judgePath') ?? '').trim();
+    if (configured && fs.existsSync(configured)) {
+        return configured;
     }
     const isWin = process.platform === 'win32';
     const names = isWin ? ['oi-judge.exe', 'oi-judge'] : ['oi-judge', 'oi-judge.exe'];
@@ -77,7 +73,7 @@ export function resolveJudgePath(): string | undefined {
             }
         }
     }
-    return fixed;
+    return configured || undefined;
 }
 
 export async function promptJudgePath(): Promise<void> {

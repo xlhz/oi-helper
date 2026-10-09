@@ -137,8 +137,8 @@
                 "properties": {
                 "oiHelper.judgePath": {
                     "type": "string",
-                    "default": "d:\\OIHelpper\\core\\build\\oi-judge.exe",
-                    "description": "oi-judge 可执行文件路径. 默认指向本地固定目录, 便于跨工作区使用; 留空则在 workspace 下查找 core/build/oi-judge(.exe)."
+                    "default": "",
+                    "description": "oi-judge 可执行文件路径. 留空则在当前工作区下查找 core/build/oi-judge(.exe); 若要在多个工作区共用同一份 oi-judge, 可在用户设置里填写绝对路径."
                 },
                 "oiHelper.xmojUser": {
                     "type": "string",
