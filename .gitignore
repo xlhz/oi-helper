@@ -16,3 +16,6 @@ extension/out/
 result.json
 contest-state.json
 *.tmp
+.trae/
+COMPARISON_REPORT.md
+ai-build-prompt.md
