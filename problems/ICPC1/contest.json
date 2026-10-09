@@ -1,0 +1,10 @@
+{
+    "name": "ICPC 示例赛",
+    "format": "icpc",
+    "durationMinutes": 300,
+    "penaltyMinutes": 20,
+    "problems": [
+        { "label": "A", "title": "A+B", "dir": "A" },
+        { "label": "B", "title": "A×B", "dir": "B" }
+    ]
+}

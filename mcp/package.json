@@ -1,0 +1,17 @@
+{
+    "name": "oi-helper-mcp",
+    "version": "0.0.1",
+    "license": "MIT",
+    "private": true,
+    "type": "module",
+    "description": "oi-judge 的 MCP Server",
+    "bin": {
+        "oi-helper-mcp": "src/server.js"
+    },
+    "scripts": {
+        "start": "node src/server.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.0"
+    }
+}

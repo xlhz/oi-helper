@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src __CSP_SOURCE__ data:; style-src __CSP_SOURCE__ 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'nonce-__NONCE__' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; font-src https://cdn.jsdelivr.net data:; connect-src https://cdn.jsdelivr.net https://unpkg.com;">
+    <title>题目配置</title>
+    <style id="theme-vars">
+/* OI Helper Webview 面板 · 品牌 CSS
+ * 单一品牌色(科技蓝) + 中性深灰表面 + 语义状态色
+ * 面向 VSCode 深色主题的开发者工具界面
+ */
+
+:root {
+    /* 品牌主色: 单一色相 (azure) */
+    --oi-blue-100: #D8E9FB;
+    --oi-blue-200: #B2D2F7;
+    --oi-blue-300: #8BBAF1;
+    --oi-blue-400: #62A2EB;
+    --oi-blue-500: #3A8EE6;
+    --oi-blue-600: #2C74C4;
+    --oi-blue-700: #205A9C;
+
+    /* 中性表面 (深色默认) */
+    --oi-bg: #0F0F13;
+    --oi-surface: #16161B;
+    --oi-surface-2: #1E1E25;
+    --oi-surface-3: #26262E;
+    --oi-line: #2A2A33;
+    --oi-ink: #E7E7EC;
+    --oi-ink-2: #A7A7B4;
+    --oi-ink-3: #73737F;
+
+    /* 语义别名 (供 Tailwind 语义类使用) */
+    --oi-background: var(--oi-bg);
+    --oi-foreground: var(--oi-ink);
+    --oi-card: var(--oi-surface);
+    --oi-card-foreground: var(--oi-ink);
+    --oi-popover: var(--oi-surface-2);
+    --oi-popover-foreground: var(--oi-ink);
+    --oi-primary: var(--oi-blue-500);
+    --oi-primary-foreground: #07131F;
+    --oi-primary-soft: rgba(58, 142, 230, 0.14);
+    --oi-muted: var(--oi-surface-2);
+    --oi-muted-foreground: var(--oi-ink-2);
+    --oi-border: var(--oi-line);
+    --oi-input: var(--oi-line);
+    --oi-ring: var(--oi-blue-400);
+
+    /* 状态色: 仅用于判定结果与状态提示 */
+    --state-success: #3FB950;
+    --state-warning: #D6A32B;
+    --state-error: #F0584F;
+    --state-info: #A371F7;
+    --state-success-soft: rgba(63, 185, 80, 0.13);
+    --state-warning-soft: rgba(214, 163, 43, 0.13);
+    --state-error-soft: rgba(240, 88, 79, 0.13);
+    --state-info-soft: rgba(163, 113, 247, 0.14);
+
+    /* 圆角 (克制: 4 / 8 / 12) */
+    --oi-radius-small: 4px;
+    --oi-radius-medium: 8px;
+    --oi-radius-large: 12px;
+    --oi-radius-full: 9999px;
+
+    /* 间距 (8pt 栅格) */
+    --oi-space-1: 4px;
+    --oi-space-2: 8px;
+    --oi-space-3: 12px;
+    --oi-space-4: 16px;
+    --oi-space-5: 24px;
+    --oi-space-6: 32px;
+    --oi-space-7: 48px;
+
+    /* 字体 */
+    --oi-font-sans: Inter, "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    --oi-font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+
+    /* 阴影: 静态极浅, 浮层才加深 */
+    --oi-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --oi-shadow-2: 0 16px 40px -14px rgba(0, 0, 0, 0.55);
+
+    /* 尺寸 */
+    --oi-topbar-h: 48px;
+    --oi-statusbar-h: 28px;
+}
+
+/* 可选浅色替代 */
+.light {
+    --oi-bg: #F6F7F9;
+    --oi-surface: #FFFFFF;
+    --oi-surface-2: #F0F1F4;
+    --oi-surface-3: #E7E9EE;
+    --oi-line: #DFE1E7;
+    --oi-ink: #16181D;
+    --oi-ink-2: #4B4F58;
+    --oi-ink-3: #838891;
+    --oi-primary-foreground: #FFFFFF;
+    --oi-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+body {
+    font-family: var(--oi-font-sans);
+}
+
+.font-mono,
+code,
+pre,
+kbd,
+samp {
+    font-family: var(--oi-font-mono);
+}
+
+/* 判定结果徽标 */
+.vd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 2px 8px;
+    border-radius: var(--oi-radius-small);
+    font-family: var(--oi-font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.vd-ac { color: var(--state-success); background: var(--state-success-soft); }
+.vd-wa { color: var(--state-error); background: var(--state-error-soft); }
+.vd-tle { color: var(--state-warning); background: var(--state-warning-soft); }
+.vd-mle { color: var(--state-warning); background: var(--state-warning-soft); }
+.vd-re { color: var(--state-error); background: var(--state-error-soft); }
+.vd-ce { color: var(--state-info); background: var(--state-info-soft); }
+
+/* 文本状态色 */
+.t-success { color: var(--state-success); }
+.t-warning { color: var(--state-warning); }
+.t-error { color: var(--state-error); }
+.t-info { color: var(--state-info); }
+
+/* 细分割线 */
+.hr-line {
+    height: 1px;
+    background: var(--oi-line);
+}
+
+/* 数字对齐 */
+.tnum {
+    font-variant-numeric: tabular-nums;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--oi-background);
+    --color-foreground: var(--oi-foreground);
+    --color-card: var(--oi-card);
+    --color-card-foreground: var(--oi-card-foreground);
+    --color-popover: var(--oi-popover);
+    --color-popover-foreground: var(--oi-popover-foreground);
+    --color-primary: var(--oi-primary);
+    --color-primary-foreground: var(--oi-primary-foreground);
+    --color-muted: var(--oi-muted);
+    --color-muted-foreground: var(--oi-muted-foreground);
+    --color-border: var(--oi-border);
+    --color-input: var(--oi-input);
+    --color-ring: var(--oi-ring);
+    --radius-sm: var(--oi-radius-small);
+    --radius-md: var(--oi-radius-medium);
+    --radius-lg: var(--oi-radius-large);
+  }
+  @layer base {
+    body { background: var(--oi-background); color: var(--oi-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--oi-background); }
+      .text-background { color: var(--oi-background); }
+      .border-background { border-color: var(--oi-background); }
+      .ring-background { --tw-ring-color: var(--oi-background); }
+      .bg-foreground { background-color: var(--oi-foreground); }
+      .text-foreground { color: var(--oi-foreground); }
+      .border-foreground { border-color: var(--oi-foreground); }
+      .ring-foreground { --tw-ring-color: var(--oi-foreground); }
+      .bg-card { background-color: var(--oi-card); }
+      .text-card { color: var(--oi-card); }
+      .border-card { border-color: var(--oi-card); }
+      .ring-card { --tw-ring-color: var(--oi-card); }
+      .bg-card-foreground { background-color: var(--oi-card-foreground); }
+      .text-card-foreground { color: var(--oi-card-foreground); }
+      .border-card-foreground { border-color: var(--oi-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--oi-card-foreground); }
+      .bg-popover { background-color: var(--oi-popover); }
+      .text-popover { color: var(--oi-popover); }
+      .border-popover { border-color: var(--oi-popover); }
+      .ring-popover { --tw-ring-color: var(--oi-popover); }
+      .bg-popover-foreground { background-color: var(--oi-popover-foreground); }
+      .text-popover-foreground { color: var(--oi-popover-foreground); }
+      .border-popover-foreground { border-color: var(--oi-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--oi-popover-foreground); }
+      .bg-primary { background-color: var(--oi-primary); }
+      .text-primary { color: var(--oi-primary); }
+      .border-primary { border-color: var(--oi-primary); }
+      .ring-primary { --tw-ring-color: var(--oi-primary); }
+      .bg-primary-foreground { background-color: var(--oi-primary-foreground); }
+      .text-primary-foreground { color: var(--oi-primary-foreground); }
+      .border-primary-foreground { border-color: var(--oi-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--oi-primary-foreground); }
+      .bg-muted { background-color: var(--oi-muted); }
+      .text-muted { color: var(--oi-muted); }
+      .border-muted { border-color: var(--oi-muted); }
+      .ring-muted { --tw-ring-color: var(--oi-muted); }
+      .bg-muted-foreground { background-color: var(--oi-muted-foreground); }
+      .text-muted-foreground { color: var(--oi-muted-foreground); }
+      .border-muted-foreground { border-color: var(--oi-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--oi-muted-foreground); }
+      .bg-border { background-color: var(--oi-border); }
+      .text-border { color: var(--oi-border); }
+      .border-border { border-color: var(--oi-border); }
+      .ring-border { --tw-ring-color: var(--oi-border); }
+      .bg-input { background-color: var(--oi-input); }
+      .text-input { color: var(--oi-input); }
+      .border-input { border-color: var(--oi-input); }
+      .ring-input { --tw-ring-color: var(--oi-input); }
+      .bg-ring { background-color: var(--oi-ring); }
+      .text-ring { color: var(--oi-ring); }
+      .border-ring { border-color: var(--oi-ring); }
+      .ring-ring { --tw-ring-color: var(--oi-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+        <!-- OI Helper 共享外壳片段 · 被 4 个页面叶子按顺序内联
+             可变槽位: pageTitle / pageSubtitle / activeNavItem / pageContent
+             共享区域(叶子必须原样保留): 顶部工具条, 页面标题条, 底部状态栏, 分段导航 DOM -->
+        <div class="app-shell" data-shell="oi-helper">
+            <header class="app-topbar">
+                <div class="topbar-brand">
+                    <span class="brand-mark" aria-hidden="true"><i data-lucide="square-terminal"></i></span>
+                    <span class="brand-name">OI Helper</span>
+                </div>
+                <nav class="app-nav" aria-label="面板导航">
+                    <a class="nav-item" href="#" data-nav-key="judge" data-dom-id="nav-judge"><i data-lucide="play"></i><span>评测</span></a>
+                    <style>[data-nav-key="judge"]{background:var(--oi-primary-soft);color:var(--oi-primary);font-weight:600;}</style>
+                </nav>
+                <div class="topbar-meta">
+                    <span class="env-badge"><i data-lucide="shield-check"></i>mingw · jobobject</span>
+                </div>
+            </header>
+
+            <div class="app-pagehead">
+                <div class="pagehead-main">
+                    <h1 class="page-title">题目配置</h1>
+                    <p class="page-subtitle">可视化编辑 problem.json · P1001</p>
+                </div>
+            </div>
+
+            <div class="app-body">
+                <div class="config-wrap">
+                    <div class="config-grid">
+                        <div class="col-left">
+                            <section class="config-card">
+                                <div class="card-head">
+                                    <h2 class="card-title">基本信息</h2>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="cfg-name">题目名</label>
+                                        <input class="control" id="cfg-name" type="text" value="P1001">
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-type">题型</label>
+                                        <div class="select-wrap">
+                                            <select class="control" id="cfg-type">
+                                                <option value="traditional" selected>传统题</option>
+                                                <option value="interactive">交互题</option>
+                                                <option value="output-only">提交答案题</option>
+                                                <option value="communication">通信题</option>
+                                            </select>
+                                            <i class="select-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-timelimit">时限 (ms)</label>
+                                        <input class="control" id="cfg-timelimit" type="number" value="1000">
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-memorylimit">内存限制 (MB)</label>
+                                        <input class="control" id="cfg-memorylimit" type="number" value="256">
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-standard">C++ 标准</label>
+                                        <div class="select-wrap">
+                                            <select class="control" id="cfg-standard">
+                                                <option value="c++11">c++11</option>
+                                                <option value="c++14" selected>c++14</option>
+                                                <option value="c++17">c++17</option>
+                                                <option value="c++20">c++20</option>
+                                            </select>
+                                            <i class="select-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-optimize">优化等级</label>
+                                        <div class="select-wrap">
+                                            <select class="control" id="cfg-optimize">
+                                                <option value="O0">O0</option>
+                                                <option value="O1">O1</option>
+                                                <option value="O2" selected>O2</option>
+                                            </select>
+                                            <i class="select-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="config-card">
+                                <div class="card-head">
+                                    <h2 class="card-title">比对与特判</h2>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="cfg-checker">checker</label>
+                                        <div class="select-wrap">
+                                            <select class="control" id="cfg-checker">
+                                                <option value="diff" selected>逐行比对 diff</option>
+                                                <option value="float">浮点误差 float</option>
+                                                <option value="testlib">特判程序 testlib</option>
+                                            </select>
+                                            <i class="select-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-eps">浮点误差 eps</label>
+                                        <input class="control" id="cfg-eps" type="text" value="1e-6">
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="cfg-checker-file">checker 文件</label>
+                                        <input class="control" id="cfg-checker-file" type="text" value="checker.cpp">
+                                        <p class="card-hint">仅当 checker 为 testlib 时使用</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="config-card">
+                                <div class="card-head">
+                                    <h2 class="card-title">freopen 配置</h2>
+                                </div>
+                                <div class="switch-row">
+                                    <span class="switch-label">启用 freopen</span>
+                                    <span class="switch" data-state="on" role="switch" aria-checked="true" aria-label="启用 freopen" tabindex="0">
+                                        <span class="switch-knob"></span>
+                                    </span>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="cfg-fin">输入文件名</label>
+                                        <input class="control" id="cfg-fin" type="text" value="P1001.in">
+                                    </div>
+                                    <div class="field">
+                                        <label for="cfg-fout">输出文件名</label>
+                                        <input class="control" id="cfg-fout" type="text" value="P1001.out">
+                                    </div>
+                                </div>
+                                <p class="card-hint">开启后测试点输入将写入该文件, 并从输出文件读取结果.</p>
+                            </section>
+
+                            <section class="config-card">
+                                <div class="card-head">
+                                    <h2 class="card-title">测试点</h2>
+                                </div>
+                                <div class="rule-list">
+                                    <div class="point-row">
+                                        <span class="point-id">#1</span>
+                                        <input class="control" type="text" value="1.in" aria-label="测试点 1 输入文件">
+                                        <input class="control" type="text" value="1.out" aria-label="测试点 1 输出文件">
+                                        <button class="icon-btn" type="button" aria-label="删除测试点 1"><i data-lucide="trash-2"></i></button>
+                                    </div>
+                                    <div class="point-row">
+                                        <span class="point-id">#2</span>
+                                        <input class="control" type="text" value="2.in" aria-label="测试点 2 输入文件">
+                                        <input class="control" type="text" value="2.out" aria-label="测试点 2 输出文件">
+                                        <button class="icon-btn" type="button" aria-label="删除测试点 2"><i data-lucide="trash-2"></i></button>
+                                    </div>
+                                </div>
+                                <button class="btn btn-dashed" type="button"><i data-lucide="plus"></i><span>添加测试点</span></button>
+                            </section>
+
+                            <section class="config-card">
+                                <div class="card-head">
+                                    <h2 class="card-title">子任务</h2>
+                                </div>
+                                <div class="rule-list">
+                                    <div class="subtask-row">
+                                        <span class="row-id">Subtask #1</span>
+                                        <label class="mini-field"><span>分值</span><input class="control" type="number" value="50"></label>
+                                        <label class="mini-field"><span>测试点</span><input class="control" type="text" value="1"></label>
+                                        <button class="icon-btn" type="button" aria-label="删除子任务 1"><i data-lucide="trash-2"></i></button>
+                                    </div>
+                                    <div class="subtask-row">
+                                        <span class="row-id">Subtask #2</span>
+                                        <label class="mini-field"><span>分值</span><input class="control" type="number" value="50"></label>
+                                        <label class="mini-field"><span>测试点</span><input class="control" type="text" value="2"></label>
+                                        <button class="icon-btn" type="button" aria-label="删除子任务 2"><i data-lucide="trash-2"></i></button>
+                                    </div>
+                                </div>
+                                <button class="btn btn-dashed" type="button"><i data-lucide="plus"></i><span>添加子任务</span></button>
+                                <p class="card-hint">组内测试点全部通过才得该组分数.</p>
+                            </section>
+
+                            <div class="action-row">
+                                <button class="btn btn-primary" type="button"><i data-lucide="save"></i><span>保存配置</span></button>
+                                <button class="btn btn-secondary" type="button"><span>重置</span></button>
+                                <span class="action-hint">保存后写入题目目录下的 problem.json</span>
+                            </div>
+                        </div>
+
+                        <div class="col-right">
+                            <section class="config-card">
+                                <div class="card-head">
+                                    <h2 class="card-title">problem.json 预览</h2>
+                                </div>
+                                <p class="sync-line"><i data-lucide="refresh-cw"></i><span>与左侧表单实时同步</span></p>
+                                <div class="json-preview">
+                                    <div class="json-gutter" aria-hidden="true">
+                                        <span>1</span>
+                                        <span>2</span>
+                                        <span>3</span>
+                                        <span>4</span>
+                                        <span>5</span>
+                                        <span>6</span>
+                                        <span>7</span>
+                                        <span>8</span>
+                                        <span>9</span>
+                                        <span>10</span>
+                                        <span>11</span>
+                                        <span>12</span>
+                                        <span>13</span>
+                                        <span>14</span>
+                                        <span>15</span>
+                                        <span>16</span>
+                                        <span>17</span>
+                                        <span>18</span>
+                                        <span>19</span>
+                                    </div>
+                                    <pre class="json-code"><code>{
+  <span class="k">"name"</span>: <span class="s">"P1001"</span>,
+  <span class="k">"type"</span>: <span class="s">"traditional"</span>,
+  <span class="k">"timeLimit"</span>: 1000,
+  <span class="k">"memoryLimit"</span>: 256,
+  <span class="k">"standard"</span>: <span class="s">"c++14"</span>,
+  <span class="k">"optimize"</span>: <span class="s">"O2"</span>,
+  <span class="k">"checker"</span>: <span class="s">"diff"</span>,
+  <span class="k">"eps"</span>: 1e-06,
+  <span class="k">"freopen"</span>: { <span class="k">"in"</span>: <span class="s">"P1001.in"</span>, <span class="k">"out"</span>: <span class="s">"P1001.out"</span> },
+  <span class="k">"tests"</span>: [
+    { <span class="k">"id"</span>: 1, <span class="k">"in"</span>: <span class="s">"1.in"</span>, <span class="k">"out"</span>: <span class="s">"1.out"</span> },
+    { <span class="k">"id"</span>: 2, <span class="k">"in"</span>: <span class="s">"2.in"</span>, <span class="k">"out"</span>: <span class="s">"2.out"</span> }
+  ],
+  <span class="k">"subtasks"</span>: [
+    { <span class="k">"id"</span>: 1, <span class="k">"score"</span>: 50, <span class="k">"tests"</span>: [1] },
+    { <span class="k">"id"</span>: 2, <span class="k">"score"</span>: 50, <span class="k">"tests"</span>: [2] }
+  ]
+}</code></pre>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="app-statusbar">
+                <div class="status-left">
+                    <span class="status-item"><i data-lucide="cpu"></i>环境 mingw</span>
+                    <span class="status-sep" aria-hidden="true"></span>
+                    <span class="status-item"><i data-lucide="shield"></i>隔离 jobobject</span>
+                    <span class="status-sep" aria-hidden="true"></span>
+                    <span class="status-item"><i data-lucide="layers"></i>并行 1</span>
+                </div>
+                <div class="status-right">
+                    <span class="status-item status-path" title="core/build/oi-judge.exe">core/build/oi-judge.exe</span>
+                    <span class="status-sep" aria-hidden="true"></span>
+                    <span class="status-item">v0.0.1</span>
+                </div>
+            </footer>
+        </div>
+
+        <style id="shell-critical-layout">
+            .app-shell {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+                background: var(--oi-background);
+                color: var(--oi-foreground);
+            }
+
+            .app-topbar {
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                height: 48px;
+                padding: 0 16px;
+                background: var(--oi-card);
+                border-bottom: 1px solid var(--oi-border);
+            }
+
+            .topbar-brand {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 0;
+            }
+
+            .brand-mark {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 24px;
+                height: 24px;
+                flex: 0 0 auto;
+                border-radius: var(--oi-radius-small);
+                background: var(--oi-primary-soft);
+                color: var(--oi-primary);
+            }
+
+            .brand-mark svg { width: 15px; height: 15px; }
+
+            .brand-name {
+                font-size: 13px;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                white-space: nowrap;
+            }
+
+            .app-nav {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                margin-left: 4px;
+                min-width: 0;
+            }
+
+            .nav-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 30px;
+                padding: 0 10px;
+                border-radius: var(--oi-radius-small);
+                color: var(--oi-muted-foreground);
+                font-size: 13px;
+                line-height: 1;
+                white-space: nowrap;
+                transition: background-color 140ms cubic-bezier(.2, .8, .2, 1), color 140ms cubic-bezier(.2, .8, .2, 1);
+            }
+
+            .nav-item svg { width: 15px; height: 15px; }
+
+            .nav-item:hover { background: var(--oi-muted); color: var(--oi-foreground); }
+
+            .nav-item[data-active="true"] {
+                background: var(--oi-primary-soft);
+                color: var(--oi-primary);
+                font-weight: 600;
+            }
+
+            .topbar-meta {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-left: auto;
+            }
+
+            .env-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 24px;
+                padding: 0 8px;
+                border: 1px solid var(--oi-border);
+                border-radius: var(--oi-radius-small);
+                font-family: var(--oi-font-mono);
+                font-size: 11px;
+                color: var(--oi-ink-2);
+                white-space: nowrap;
+            }
+
+            .env-badge svg { width: 13px; height: 13px; color: var(--state-success); }
+
+            .app-pagehead {
+                flex: 0 0 auto;
+                padding: 20px 24px 16px;
+                border-bottom: 1px solid var(--oi-border);
+            }
+
+            .page-title {
+                font-size: 20px;
+                font-weight: 600;
+                line-height: 1.25;
+                letter-spacing: -0.01em;
+                text-wrap: balance;
+                word-break: keep-all;
+            }
+
+            .page-subtitle {
+                margin-top: 5px;
+                font-size: 13px;
+                line-height: 1.5;
+                color: var(--oi-muted-foreground);
+            }
+
+            .app-body {
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+
+            .app-statusbar {
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                height: 28px;
+                padding: 0 16px;
+                background: var(--oi-card);
+                border-top: 1px solid var(--oi-border);
+                font-family: var(--oi-font-mono);
+                font-size: 11px;
+                color: var(--oi-ink-3);
+            }
+
+            .status-left,
+            .status-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 0;
+            }
+
+            .status-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                white-space: nowrap;
+            }
+
+            .app-statusbar svg { width: 12px; height: 12px; }
+
+            .status-path { overflow: hidden; text-overflow: ellipsis; }
+
+            .status-sep {
+                flex: 0 0 auto;
+                width: 1px;
+                height: 12px;
+                background: var(--oi-border);
+            }
+
+            @media (max-width: 760px) {
+                .app-statusbar { display: none; }
+                .nav-item span { display: none; }
+                .app-pagehead { padding: 16px; }
+            }
+        </style>
+
+        <style id="critical-layout">
+            .config-wrap {
+                padding: 24px;
+                max-width: 1320px;
+                margin: 0 auto;
+            }
+
+            .config-grid {
+                display: grid;
+                grid-template-columns: repeat(12, minmax(0, 1fr));
+                gap: 24px;
+                align-items: start;
+            }
+
+            .col-left {
+                grid-column: span 7;
+                display: flex;
+                flex-direction: column;
+                gap: 24px;
+                min-width: 0;
+            }
+
+            .col-right {
+                grid-column: span 5;
+                display: flex;
+                flex-direction: column;
+                gap: 24px;
+                min-width: 0;
+            }
+
+            .config-card {
+                background: var(--oi-card);
+                border: 1px solid var(--oi-border);
+                border-radius: var(--oi-radius-large);
+                padding: 20px;
+            }
+
+            .card-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 16px;
+            }
+
+            .card-title {
+                font-size: 14px;
+                font-weight: 600;
+                line-height: 1.4;
+                color: var(--oi-foreground);
+                text-wrap: balance;
+                word-break: keep-all;
+            }
+
+            .card-hint {
+                margin-top: 12px;
+                font-size: 12px;
+                line-height: 1.5;
+                color: var(--oi-ink-3);
+            }
+
+            .field > .card-hint { margin-top: 0; }
+
+            .form-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 16px;
+            }
+
+            .field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                min-width: 0;
+            }
+
+            .field-full { grid-column: 1 / -1; }
+
+            .field > label,
+            .mini-field > span {
+                font-size: 13px;
+                line-height: 1.4;
+                color: var(--oi-muted-foreground);
+            }
+
+            .mini-field > span { font-size: 12px; }
+
+            .control {
+                width: 100%;
+                height: 38px;
+                padding: 0 12px;
+                border: 1px solid var(--oi-border);
+                border-radius: var(--oi-radius-medium);
+                background: var(--oi-background);
+                color: var(--oi-foreground);
+                font-family: inherit;
+                font-size: 13px;
+                line-height: 1.4;
+                transition: border-color 140ms cubic-bezier(.2, .8, .2, 1), background-color 140ms cubic-bezier(.2, .8, .2, 1), box-shadow 140ms cubic-bezier(.2, .8, .2, 1);
+            }
+
+            .control:hover { border-color: var(--oi-ink-3); }
+
+            .control:focus-visible {
+                outline: none;
+                border-color: var(--oi-ring);
+                box-shadow: 0 0 0 2px var(--oi-ring);
+            }
+
+            .control:disabled {
+                background: var(--oi-surface-2);
+                color: var(--oi-ink-3);
+                border-color: var(--oi-border);
+                cursor: not-allowed;
+            }
+
+            .select-wrap { position: relative; }
+
+            .select-wrap .control {
+                appearance: none;
+                -webkit-appearance: none;
+                padding-right: 34px;
+                cursor: pointer;
+            }
+
+            .select-chevron {
+                position: absolute;
+                top: 50%;
+                right: 11px;
+                width: 14px;
+                height: 14px;
+                transform: translateY(-50%);
+                color: var(--oi-ink-3);
+                pointer-events: none;
+            }
+
+            .switch-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding-bottom: 16px;
+                margin-bottom: 16px;
+                border-bottom: 1px solid var(--oi-border);
+            }
+
+            .switch-label {
+                font-size: 13px;
+                line-height: 1.4;
+                color: var(--oi-foreground);
+            }
+
+            .switch {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                flex: 0 0 auto;
+                width: 36px;
+                height: 20px;
+                border-radius: var(--oi-radius-full);
+                background: var(--oi-surface-3);
+                cursor: pointer;
+                transition: background-color 160ms cubic-bezier(.2, .8, .2, 1);
+            }
+
+            .switch[data-state="on"] { background: var(--oi-primary); }
+
+            .switch:focus-visible {
+                outline: none;
+                box-shadow: 0 0 0 2px var(--oi-ring);
+            }
+
+            .switch-knob {
+                position: absolute;
+                left: 2px;
+                top: 2px;
+                width: 16px;
+                height: 16px;
+                border-radius: var(--oi-radius-full);
+                background: var(--oi-ink);
+                transition: transform 160ms cubic-bezier(.2, .8, .2, 1);
+            }
+
+            .switch[data-state="on"] .switch-knob { transform: translateX(16px); }
+
+            .rule-list { display: block; }
+
+            .point-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--oi-border);
+            }
+
+            .point-row:last-child { border-bottom: none; }
+
+            .point-id {
+                flex: 0 0 auto;
+                width: 26px;
+                font-family: var(--oi-font-mono);
+                font-size: 12px;
+                color: var(--oi-muted-foreground);
+            }
+
+            .point-row .control { flex: 1 1 0; min-width: 0; }
+
+            .subtask-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--oi-border);
+            }
+
+            .subtask-row:last-child { border-bottom: none; }
+
+            .row-id {
+                flex: 1 1 140px;
+                min-width: 0;
+                font-family: var(--oi-font-mono);
+                font-size: 12px;
+                color: var(--oi-muted-foreground);
+            }
+
+            .mini-field {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                flex: 0 0 118px;
+                min-width: 0;
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                height: 38px;
+                padding: 0 16px;
+                border: 1px solid transparent;
+                border-radius: var(--oi-radius-medium);
+                font-family: inherit;
+                font-size: 13px;
+                font-weight: 600;
+                line-height: 1;
+                white-space: nowrap;
+                cursor: pointer;
+                transition: background-color 140ms cubic-bezier(.2, .8, .2, 1), border-color 140ms cubic-bezier(.2, .8, .2, 1), color 140ms cubic-bezier(.2, .8, .2, 1), transform 140ms cubic-bezier(.2, .8, .2, 1);
+            }
+
+            .btn svg { width: 15px; height: 15px; }
+
+            .btn:focus-visible {
+                outline: none;
+                box-shadow: 0 0 0 2px var(--oi-ring);
+            }
+
+            .btn-primary {
+                background: var(--oi-primary);
+                color: var(--oi-primary-foreground);
+            }
+
+            .btn-primary:hover { background: var(--oi-blue-600); }
+            .btn-primary:active { transform: translateY(0); }
+
+            .btn-secondary {
+                background: transparent;
+                border-color: var(--oi-border);
+                color: var(--oi-foreground);
+            }
+
+            .btn-secondary:hover {
+                background: var(--oi-muted);
+                border-color: var(--oi-ink-3);
+            }
+
+            .btn-dashed {
+                width: 100%;
+                margin-top: 16px;
+                background: transparent;
+                border: 1px dashed var(--oi-border);
+                color: var(--oi-muted-foreground);
+                font-weight: 500;
+            }
+
+            .btn-dashed:hover {
+                background: var(--oi-primary-soft);
+                border-color: var(--oi-primary);
+                color: var(--oi-primary);
+            }
+
+            .icon-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 auto;
+                width: 32px;
+                height: 32px;
+                border: 1px solid transparent;
+                border-radius: var(--oi-radius-medium);
+                background: transparent;
+                color: var(--oi-ink-3);
+                cursor: pointer;
+                transition: background-color 140ms cubic-bezier(.2, .8, .2, 1), color 140ms cubic-bezier(.2, .8, .2, 1);
+            }
+
+            .icon-btn svg { width: 15px; height: 15px; }
+
+            .icon-btn:hover {
+                background: var(--state-error-soft);
+                color: var(--state-error);
+            }
+
+            .icon-btn:focus-visible {
+                outline: none;
+                box-shadow: 0 0 0 2px var(--oi-ring);
+            }
+
+            .action-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .action-hint {
+                margin-left: auto;
+                font-size: 12px;
+                line-height: 1.5;
+                color: var(--oi-ink-3);
+            }
+
+            .sync-line {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin: 0 0 12px;
+                font-size: 12px;
+                line-height: 1.5;
+                color: var(--oi-muted-foreground);
+            }
+
+            .sync-line svg { width: 13px; height: 13px; }
+
+            .json-preview {
+                display: flex;
+                align-items: flex-start;
+                background: var(--oi-surface-2);
+                border: 1px solid var(--oi-border);
+                border-radius: var(--oi-radius-medium);
+                overflow-x: auto;
+            }
+
+            .json-gutter {
+                display: flex;
+                flex-direction: column;
+                flex: 0 0 auto;
+                padding: 14px 10px 14px 14px;
+                border-right: 1px solid var(--oi-border);
+                font-family: var(--oi-font-mono);
+                font-size: 12px;
+                line-height: 1.75;
+                color: var(--oi-ink-3);
+                text-align: right;
+                user-select: none;
+            }
+
+            .json-code {
+                flex: 0 0 auto;
+                margin: 0;
+                padding: 14px 16px 14px 14px;
+                font-family: var(--oi-font-mono);
+                font-size: 12px;
+                line-height: 1.75;
+                color: var(--oi-ink-3);
+                white-space: pre;
+            }
+
+            .json-code .k { color: var(--oi-ink-2); }
+            .json-code .s { color: var(--oi-ink); }
+
+            @media (max-width: 1023px) {
+                .config-grid { grid-template-columns: 1fr; }
+                .col-left,
+                .col-right { grid-column: 1 / -1; }
+            }
+
+            @media (max-width: 720px) {
+                .form-grid { grid-template-columns: 1fr; }
+                .config-wrap { padding: 16px; }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .control,
+                .btn,
+                .icon-btn,
+                .switch,
+                .switch-knob,
+                .nav-item {
+                    transition-duration: 0.01ms;
+                }
+            }
+        </style>
+    </main>
+    <script nonce="__NONCE__">lucide.createIcons();</script>
+<script nonce="__NONCE__">
+    (function () {
+        const vscode = acquireVsCodeApi();
+        const root = document.documentElement;
+
+        function syncTheme() {
+            const isLight = document.body.classList.contains('vscode-light');
+            const isHighContrast = document.body.classList.contains('vscode-high-contrast');
+            root.classList.toggle('light', isLight || isHighContrast);
+            root.classList.toggle('dark', !(isLight || isHighContrast));
+        }
+
+        syncTheme();
+        window.addEventListener('message', function (event) {
+            const message = event.data;
+            if (!message || typeof message !== 'object') {
+                return;
+            }
+            if (message.type === 'theme') {
+                syncTheme();
+                return;
+            }
+            if (message.type === 'result') {
+                window.dispatchEvent(new CustomEvent('oi-helper-result', { detail: message.payload }));
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            const actionEl = event.target.closest('[data-action]');
+            if (actionEl) {
+                event.preventDefault();
+                vscode.postMessage({ type: actionEl.getAttribute('data-action') });
+                return;
+            }
+            const navEl = event.target.closest('[data-dom-id]');
+            if (navEl) {
+                event.preventDefault();
+                vscode.postMessage({ type: 'navigate', domId: navEl.getAttribute('data-dom-id') });
+            }
+        }, true);
+
+        vscode.postMessage({ type: 'ready' });
+    })();
+</script>
+</body>
+</html>

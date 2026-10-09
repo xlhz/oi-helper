@@ -1,0 +1,19 @@
+{
+    "name": "P1001",
+    "type": "traditional",
+    "timeLimit": 1000,
+    "memoryLimit": 256,
+    "standard": "c++14",
+    "optimize": "O2",
+    "checker": "diff",
+    "eps": 1e-6,
+    "freopen": { "in": "P1001.in", "out": "P1001.out" },
+    "tests": [
+        { "id": 1, "in": "1.in", "out": "1.out" },
+        { "id": 2, "in": "2.in", "out": "2.out" }
+    ],
+    "subtasks": [
+        { "id": 1, "score": 30, "tests": [1] },
+        { "id": 2, "score": 70, "tests": [2] }
+    ]
+}

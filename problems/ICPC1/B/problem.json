@@ -1,0 +1,11 @@
+{
+    "name": "B",
+    "type": "traditional",
+    "format": "icpc",
+    "timeLimit": 1000,
+    "memoryLimit": 256,
+    "standard": "c++14",
+    "optimize": "O2",
+    "checker": "diff",
+    "tests": [ { "id": 1, "in": "1.in", "out": "1.out" } ]
+}

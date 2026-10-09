@@ -1,0 +1,12 @@
+{
+  "name": "INT1",
+  "type": "interactive",
+  "timeLimit": 2000,
+  "memoryLimit": 256,
+  "standard": "c++14",
+  "optimize": "O2",
+  "interactor": "interactor.cpp",
+  "tests": [
+    { "id": 1, "in": "1.in" }
+  ]
+}

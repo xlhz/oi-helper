@@ -1,0 +1,2714 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src __CSP_SOURCE__ data:; style-src __CSP_SOURCE__ 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'nonce-__NONCE__' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; font-src https://cdn.jsdelivr.net data:; connect-src https://cdn.jsdelivr.net https://unpkg.com;">
+    <title>评测面板</title>
+    <style id="theme-vars">
+/* OI Helper Webview 面板 · 品牌 CSS
+ * 单一品牌色(科技蓝) + 中性深灰表面 + 语义状态色
+ * 面向 VSCode 深色主题的开发者工具界面
+ */
+
+:root {
+    /* 中性表面: 透出主题默认背景 */
+    --oi-bg: transparent;
+    --oi-surface: transparent;
+    --oi-surface-2: transparent;
+    --oi-surface-3: var(--vscode-toolbar-hoverBackground);
+    --oi-line: var(--vscode-panel-border);
+    --oi-ink: var(--vscode-foreground);
+    --oi-ink-2: var(--vscode-descriptionForeground);
+    --oi-ink-3: var(--vscode-descriptionForeground);
+
+    /* 语义别名 (供 Tailwind 语义类使用) */
+    --oi-background: transparent;
+    --oi-foreground: var(--oi-ink);
+    --oi-card: transparent;
+    --oi-card-foreground: var(--oi-ink);
+    --oi-popover: transparent;
+    --oi-popover-foreground: var(--oi-ink);
+    --oi-primary: var(--vscode-button-background);
+    --oi-primary-foreground: var(--vscode-button-foreground);
+    --oi-primary-soft: var(--vscode-list-activeSelectionBackground);
+    --oi-muted: var(--vscode-toolbar-hoverBackground);
+    --oi-muted-foreground: var(--oi-ink-2);
+    --oi-border: var(--oi-line);
+    --oi-input: var(--vscode-input-border, var(--oi-line));
+    --oi-ring: var(--vscode-focusBorder);
+
+    /* 状态色: 仅用于判定结果与状态提示 */
+    --state-success: #3FB950;
+    --state-warning: #D6A32B;
+    --state-error: #F0584F;
+    --state-info: #A371F7;
+    --state-success-soft: rgba(63, 185, 80, 0.13);
+    --state-warning-soft: rgba(214, 163, 43, 0.13);
+    --state-error-soft: rgba(240, 88, 79, 0.13);
+    --state-info-soft: rgba(163, 113, 247, 0.14);
+
+    /* 圆角 (克制: 4 / 8 / 12) */
+    --oi-radius-small: 4px;
+    --oi-radius-medium: 8px;
+    --oi-radius-large: 12px;
+    --oi-radius-full: 9999px;
+
+    /* 间距 (8pt 栅格) */
+    --oi-space-1: 4px;
+    --oi-space-2: 8px;
+    --oi-space-3: 12px;
+    --oi-space-4: 16px;
+    --oi-space-5: 24px;
+    --oi-space-6: 32px;
+    --oi-space-7: 48px;
+
+    /* 字体 */
+    --oi-font-sans: Inter, "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    --oi-font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+
+    /* 阴影: 静态极浅, 浮层才加深 */
+    --oi-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --oi-shadow-2: 0 16px 40px -14px rgba(0, 0, 0, 0.55);
+
+    /* 尺寸 */
+    --oi-topbar-h: 48px;
+    --oi-statusbar-h: 28px;
+}
+
+body {
+    font-family: var(--oi-font-sans);
+}
+
+/* 让原生下拉展开列表跟随主题明暗, 避免深色主题下白底; 只作用于下拉本身, 不影响页面背景 */
+html.dark .nav-sel { color-scheme: dark; }
+html.light .nav-sel { color-scheme: light; }
+
+.nav-sel option {
+    background: var(--vscode-dropdown-background, var(--vscode-input-background));
+    color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+}
+
+.font-mono,
+code,
+pre,
+kbd,
+samp {
+    font-family: var(--oi-font-mono);
+}
+
+/* 判定结果徽标 */
+.vd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 2px 8px;
+    border-radius: var(--oi-radius-small);
+    font-family: var(--oi-font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.vd-ac { color: var(--state-success); background: var(--state-success-soft); }
+.vd-wa { color: var(--state-error); background: var(--state-error-soft); }
+.vd-tle { color: var(--state-warning); background: var(--state-warning-soft); }
+.vd-mle { color: var(--state-warning); background: var(--state-warning-soft); }
+.vd-re { color: var(--state-error); background: var(--state-error-soft); }
+.vd-ce { color: var(--state-info); background: var(--state-info-soft); }
+
+/* 文本状态色 */
+.t-success { color: var(--state-success); }
+.t-warning { color: var(--state-warning); }
+.t-error { color: var(--state-error); }
+.t-info { color: var(--state-info); }
+
+/* 细分割线 */
+.hr-line {
+    height: 1px;
+    background: var(--oi-line);
+}
+
+/* 数字对齐 */
+.tnum {
+    font-variant-numeric: tabular-nums;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--oi-background);
+    --color-foreground: var(--oi-foreground);
+    --color-card: var(--oi-card);
+    --color-card-foreground: var(--oi-card-foreground);
+    --color-popover: var(--oi-popover);
+    --color-popover-foreground: var(--oi-popover-foreground);
+    --color-primary: var(--oi-primary);
+    --color-primary-foreground: var(--oi-primary-foreground);
+    --color-muted: var(--oi-muted);
+    --color-muted-foreground: var(--oi-muted-foreground);
+    --color-border: var(--oi-border);
+    --color-input: var(--oi-input);
+    --color-ring: var(--oi-ring);
+    --radius-sm: var(--oi-radius-small);
+    --radius-md: var(--oi-radius-medium);
+    --radius-lg: var(--oi-radius-large);
+  }
+  @layer base {
+    body { background: var(--oi-background); color: var(--oi-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--oi-background); }
+      .text-background { color: var(--oi-background); }
+      .border-background { border-color: var(--oi-background); }
+      .ring-background { --tw-ring-color: var(--oi-background); }
+      .bg-foreground { background-color: var(--oi-foreground); }
+      .text-foreground { color: var(--oi-foreground); }
+      .border-foreground { border-color: var(--oi-foreground); }
+      .ring-foreground { --tw-ring-color: var(--oi-foreground); }
+      .bg-card { background-color: var(--oi-card); }
+      .text-card { color: var(--oi-card); }
+      .border-card { border-color: var(--oi-card); }
+      .ring-card { --tw-ring-color: var(--oi-card); }
+      .bg-card-foreground { background-color: var(--oi-card-foreground); }
+      .text-card-foreground { color: var(--oi-card-foreground); }
+      .border-card-foreground { border-color: var(--oi-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--oi-card-foreground); }
+      .bg-popover { background-color: var(--oi-popover); }
+      .text-popover { color: var(--oi-popover); }
+      .border-popover { border-color: var(--oi-popover); }
+      .ring-popover { --tw-ring-color: var(--oi-popover); }
+      .bg-popover-foreground { background-color: var(--oi-popover-foreground); }
+      .text-popover-foreground { color: var(--oi-popover-foreground); }
+      .border-popover-foreground { border-color: var(--oi-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--oi-popover-foreground); }
+      .bg-primary { background-color: var(--oi-primary); }
+      .text-primary { color: var(--oi-primary); }
+      .border-primary { border-color: var(--oi-primary); }
+      .ring-primary { --tw-ring-color: var(--oi-primary); }
+      .bg-primary-foreground { background-color: var(--oi-primary-foreground); }
+      .text-primary-foreground { color: var(--oi-primary-foreground); }
+      .border-primary-foreground { border-color: var(--oi-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--oi-primary-foreground); }
+      .bg-muted { background-color: var(--oi-muted); }
+      .text-muted { color: var(--oi-muted); }
+      .border-muted { border-color: var(--oi-muted); }
+      .ring-muted { --tw-ring-color: var(--oi-muted); }
+      .bg-muted-foreground { background-color: var(--oi-muted-foreground); }
+      .text-muted-foreground { color: var(--oi-muted-foreground); }
+      .border-muted-foreground { border-color: var(--oi-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--oi-muted-foreground); }
+      .bg-border { background-color: var(--oi-border); }
+      .text-border { color: var(--oi-border); }
+      .border-border { border-color: var(--oi-border); }
+      .ring-border { --tw-ring-color: var(--oi-border); }
+      .bg-input { background-color: var(--oi-input); }
+      .text-input { color: var(--oi-input); }
+      .border-input { border-color: var(--oi-input); }
+      .ring-input { --tw-ring-color: var(--oi-input); }
+      .bg-ring { background-color: var(--oi-ring); }
+      .text-ring { color: var(--oi-ring); }
+      .border-ring { border-color: var(--oi-ring); }
+      .ring-ring { --tw-ring-color: var(--oi-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+        <div class="app-shell" data-shell="oi-helper">
+            <div class="app-body">
+                <div class="page-grid">
+                    <div class="col-main">
+                        <section class="card">
+                            <div class="field-row">
+                                <label class="field-label" for="fetch-url">题目网址</label>
+                                <div class="input-group">
+                                    <input class="inp mono" id="fetch-url" type="text" placeholder="https://www.xmoj.tech/problem.php?id=2298">
+                                    <button class="btn btn-secondary" type="button" id="identify-btn"><i data-lucide="search"></i><span>识别</span></button>
+                                    <button class="btn btn-secondary" type="button" id="refresh-btn" title="清掉缓存并重新抓取该题"><i data-lucide="refresh-cw"></i><span>刷新题目</span></button>
+                                    <button class="btn btn-secondary" type="button" id="cookie-help-btn"><i data-lucide="help-circle"></i><span>Cookie 帮助</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row" id="nav-row" hidden>
+                                <label class="field-label">选择题目</label>
+                                <div class="input-group nav-group">
+                                    <span class="nav-title" id="nav-title" hidden></span>
+                                    <button class="btn btn-secondary" type="button" id="nav-prev"><i data-lucide="chevron-left"></i><span>上一题</span></button>
+                                    <select class="inp nav-sel" id="nav-select" disabled></select>
+                                    <button class="btn btn-secondary" type="button" id="nav-next"><i data-lucide="chevron-right"></i><span>下一题</span></button>
+                                    <input class="inp mono nav-num" id="nav-num" type="text" placeholder="题号">
+                                    <button class="btn btn-secondary" type="button" id="nav-goto"><span>跳转</span></button>
+                                    <button class="btn btn-secondary" type="button" id="nav-preview"><i data-lucide="book-open"></i><span>预览题目</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row" id="orig-row" hidden>
+                                <label class="field-label">原题</label>
+                                <div class="input-group nav-group">
+                                    <select class="inp nav-sel" id="orig-oj" title="选择原题站点" disabled></select>
+                                    <button class="btn btn-secondary" type="button" id="orig-open"><i data-lucide="external-link"></i><span>查看原题</span></button>
+                                    <button class="btn btn-secondary" type="button" id="orig-preview"><i data-lucide="book-open"></i><span>预览原题</span></button>
+                                    <button class="btn btn-secondary" type="button" id="orig-samples"><i data-lucide="download"></i><span>原题样例</span></button>
+                                    <button class="btn btn-secondary" type="button" id="orig-link"><i data-lucide="link"></i><span>复制链接</span></button>
+                                    <button class="btn btn-primary" type="button" id="orig-submit"><i data-lucide="upload"></i><span>提交原题</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row" id="orig-hint-row" hidden>
+                                <p class="field-help orig-hint" id="orig-hint"></p>
+                            </div>
+                            <div class="field-row" id="sample-row">
+                                <label class="field-label">样例方式</label>
+                                <div class="input-group">
+                                    <label class="paste-radio"><input type="radio" name="fetch-sample-mode" value="inline" checked><span>内联到面板</span></label>
+                                    <label class="paste-radio"><input type="radio" name="fetch-sample-mode" value="file"><span>下载为文件</span></label>
+                                    <button class="btn btn-secondary" type="button" id="extra-btn"><i data-lucide="package"></i><span>下载更多样例</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row">
+                                <label class="field-label">样例缓存</label>
+                                <div class="input-group">
+                                    <button class="btn btn-secondary" type="button" id="clear-cache-btn"><i data-lucide="trash-2"></i><span>清除样例缓存</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row">
+                                <p class="field-help fetch-hint" id="fetch-hint"></p>
+                            </div>
+                            <div class="field-row">
+                                <label class="field-label" for="input-problem-dir">题目目录</label>
+                                <div class="input-group">
+                                    <input class="inp mono" id="input-problem-dir" type="text" placeholder="留空则用 problem.json 自动配对">
+                                    <button class="btn btn-secondary" type="button" data-action="browse-problem"><i data-lucide="folder-open"></i><span>浏览</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row">
+                                <label class="field-label" for="input-source-file">源文件</label>
+                                <div class="input-group">
+                                    <input class="inp mono" id="input-source-file" type="text" placeholder="留空则用当前打开的 .cpp">
+                                    <button class="btn btn-secondary" type="button" data-action="browse-source"><i data-lucide="file-code"></i><span>浏览</span></button>
+                                    <button class="btn btn-secondary" type="button" id="freopen-btn" title="右键可从源码中删除 freopen 语句"><i data-lucide="code"></i><span>填 freopen</span></button>
+                                    <button class="btn btn-secondary" type="button" id="fastio-btn" title="右键可从源码中删除读写加速语句"><i data-lucide="zap"></i><span>加速 IO</span></button>
+                                    <button class="btn btn-primary" type="button" id="submit-btn" title="右键可复制源码到剪贴板" hidden><i data-lucide="upload"></i><span>一键提交</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row" id="submit-hint-row" hidden>
+                                <div class="submit-line">
+                                    <p class="field-help submit-hint" id="submit-hint"></p>
+                                    <button class="btn btn-secondary" type="button" id="copy-source-btn" hidden><i data-lucide="clipboard-copy"></i><span>手动复制</span></button>
+                                    <button class="btn btn-secondary" type="button" id="open-submit-btn" hidden><i data-lucide="external-link"></i><span>打开提交页</span></button>
+                                </div>
+                            </div>
+                            <div class="field-row">
+                                <p class="field-help" id="freopen-hint"></p>
+                            </div>
+                            <div class="field-row">
+                                <p class="field-help">留空题目目录时使用 problem.json 自动配对测试点</p>
+                            </div>
+                            <div class="hr-line" role="separator"></div>
+                            <div class="case-head">
+                                <span class="case-head-label">
+                                    <input type="checkbox" class="case-check" id="case-all" checked aria-label="全选测试点">
+                                    <span class="field-label">测试点</span>
+                                    <span class="case-count" id="case-count"></span>
+                                </span>
+                                <span class="case-head-actions">
+                                    <button class="btn btn-secondary" type="button" id="fetch-btn"><i data-lucide="download"></i><span>导入</span></button>
+                                    <button class="btn btn-text" type="button" id="case-toggle"><i data-lucide="chevron-up"></i><span>收起</span></button>
+                                    <button class="btn btn-text" type="button" data-action="remove-selected-cases"><i data-lucide="trash-2"></i><span>删除选中</span></button>
+                                </span>
+                            </div>
+                            <div class="field-help case-hint" id="case-hint" hidden>
+                                <span id="case-hint-text"></span>
+                                <button class="btn btn-text" type="button" id="case-dup-fix" hidden><i data-lucide="trash-2"></i><span>删除重复</span></button>
+                            </div>
+                            <div class="case-body" id="case-body">
+                            <div class="case-list" id="case-list"></div>
+                            <div class="case-empty" id="case-empty">暂无测试点, 使用网址导入或在下方粘贴数据</div>
+                            <div class="hr-line" role="separator"></div>
+                            <div class="paste-row">
+                                <span class="field-label">粘贴数据</span>
+                                <div class="paste-group">
+                                    <div class="paste-mode">
+                                        <label class="paste-radio"><input type="radio" name="paste-mode" value="text" checked><span>纯文本</span></label>
+                                        <label class="paste-radio"><input type="radio" name="paste-mode" value="split"><span>按分隔符分开</span></label>
+                                        <span class="paste-delim" id="paste-delim-wrap">
+                                            <span>分隔符</span>
+                                            <input class="inp mono" id="paste-delim" type="text" value="===" aria-label="分隔符">
+                                        </span>
+                                    </div>
+                                    <textarea class="inp mono paste-area" id="paste-input" rows="4" placeholder="粘贴输入数据"></textarea>
+                                    <textarea class="inp mono paste-area" id="paste-output" rows="4" placeholder="粘贴预期输出"></textarea>
+                                    <div class="paste-actions">
+                                        <button class="btn btn-secondary" type="button" data-action="add-paste"><i data-lucide="plus"></i><span>添加为测试点</span></button>
+                                        <span class="paste-hint" id="paste-hint"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                        </section>
+
+                        <div class="action-row">
+                            <button class="btn btn-primary" type="button" data-action="run-judge"><i data-lucide="play"></i><span>开始评测</span></button>
+                            <button class="btn btn-secondary" type="button" data-action="reset"><i data-lucide="rotate-ccw"></i><span>重置</span></button>
+                            <span class="action-hint">支持多测试点 · 可直接粘贴数据</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="app-statusbar">
+                <div class="status-left">
+                    <span class="status-item"><i data-lucide="cpu"></i>环境 mingw</span>
+                    <span class="status-sep" aria-hidden="true"></span>
+                    <span class="status-item"><i data-lucide="shield"></i>隔离 jobobject</span>
+                    <span class="status-sep" aria-hidden="true"></span>
+                    <span class="status-item"><i data-lucide="layers"></i>并行 1</span>
+                </div>
+                <div class="status-right">
+                    <span class="status-item status-path" title="core/build/oi-judge.exe">core/build/oi-judge.exe</span>
+                    <span class="status-sep" aria-hidden="true"></span>
+                    <span class="status-item">v0.0.1</span>
+                </div>
+            </footer>
+        </div>
+
+<style id="shell-critical-layout">
+    .app-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background: var(--oi-background);
+        color: var(--oi-foreground);
+    }
+
+    .app-body {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .app-statusbar {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: 28px;
+        padding: 0 16px;
+        background: var(--oi-card);
+        font-family: var(--oi-font-mono);
+        font-size: 11px;
+        color: var(--oi-ink-3);
+    }
+
+    .status-left,
+    .status-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .status-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .app-statusbar svg { width: 12px; height: 12px; }
+
+    .status-path { overflow: hidden; text-overflow: ellipsis; }
+
+    .status-sep {
+        flex: 0 0 auto;
+        width: 1px;
+        height: 12px;
+        background: var(--oi-border);
+    }
+
+    @media (max-width: 760px) {
+        .app-statusbar { display: none; }
+    }
+</style>
+
+<style id="critical-layout">
+    .page-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        align-items: start;
+        gap: 24px;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .col-main {
+        grid-column: span 12;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+    }
+
+    .card {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+        padding: 16px;
+        background: var(--oi-card);
+        border-radius: var(--oi-radius-large);
+    }
+
+    .field-row {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .field-label {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--oi-muted-foreground);
+        white-space: nowrap;
+    }
+
+    .field-help {
+        grid-column: 2 / -1;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--oi-ink-3);
+    }
+
+    .case-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .input-group.nav-group {
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .input-group.nav-group .btn {
+        flex: 0 0 auto;
+        padding: 0 8px;
+    }
+
+    .input-group.nav-group .nav-sel {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0 6px;
+        appearance: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+    }
+
+    .input-group.nav-group .nav-num {
+        flex: 0 0 auto;
+        width: 52px;
+        padding: 0 6px;
+    }
+
+    /* 普通题目(做题链接): 该栏没有题目下拉, 用文字显示题目名 */
+    .nav-title {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .nav-title[hidden] {
+        display: none;
+    }
+
+    .case-head-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .case-head-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 0 0 auto;
+    }
+
+    .case-body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+    }
+
+    .case-body[hidden], .case-edit[hidden], .case-preview[hidden] { display: none; }
+
+    #case-toggle svg { transition: transform .15s ease; }
+
+    #case-toggle[data-collapsed="true"] svg { transform: rotate(180deg); }
+
+    [data-action="edit-case"] svg { transition: transform .15s ease; }
+
+    .case-row.collapsed [data-action="edit-case"] svg { transform: rotate(180deg); }
+
+    .case-count {
+        font-size: 12px;
+        color: var(--oi-muted-foreground);
+    }
+
+    .case-hint {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .case-hint[hidden] {
+        display: none;
+    }
+
+    .case-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .case-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        background: var(--oi-surface-2);
+        border: 1px solid var(--oi-border);
+        border-radius: var(--oi-radius-medium);
+    }
+
+    .case-row-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .case-check {
+        flex: 0 0 auto;
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        cursor: pointer;
+        accent-color: var(--vscode-button-background);
+    }
+
+    .case-idx {
+        font-family: var(--oi-font-mono);
+        font-size: 12px;
+        color: var(--oi-muted-foreground);
+    }
+
+    .case-empty {
+        padding: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+        text-align: center;
+        color: var(--oi-ink-3);
+        border: 1px dashed var(--oi-border);
+        border-radius: var(--oi-radius-medium);
+    }
+
+    .paste-row {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        align-items: start;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .paste-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .paste-area {
+        height: auto;
+        padding: 8px 10px;
+        line-height: 1.5;
+        resize: vertical;
+    }
+
+    /* 空值时用行高把提示文字撑到输入框垂直中间 */
+    .paste-area:placeholder-shown { line-height: 28px; }
+
+    .paste-mode {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .paste-radio {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--oi-ink-2);
+        cursor: pointer;
+    }
+
+    .paste-radio input {
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .paste-delim {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .paste-delim span {
+        font-size: 12px;
+        color: var(--oi-muted-foreground);
+        white-space: nowrap;
+    }
+
+    .paste-delim .inp {
+        width: 96px;
+        flex: 0 0 auto;
+    }
+
+    .paste-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .paste-hint {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--oi-ink-3);
+    }
+
+    .paste-hint.t-error { color: var(--state-error); }
+    .paste-hint.t-success { color: var(--state-success); }
+
+    .fetch-hint.t-error { color: var(--state-error); }
+    .fetch-hint.t-success { color: var(--state-success); }
+
+    .submit-hint.t-error { color: var(--state-error); }
+    .submit-hint.t-success { color: var(--state-success); }
+
+    .orig-hint.t-error { color: var(--state-error); }
+    .orig-hint.t-success { color: var(--state-success); }
+
+    #nav-row[hidden],
+    #nav-prev[hidden],
+    #nav-select[hidden],
+    #nav-next[hidden],
+    #sample-row[hidden],
+    #orig-row[hidden],
+    #orig-hint-row[hidden],
+    #submit-hint-row[hidden],
+    #submit-btn[hidden] {
+        display: none;
+    }
+
+    .submit-line {
+        grid-column: 2 / -1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .submit-line .btn {
+        height: 26px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
+
+    #copy-source-btn[hidden],
+    #open-submit-btn[hidden] {
+        display: none;
+    }
+
+    .case-tag {
+        padding: 1px 6px;
+        border: 1px solid var(--oi-border);
+        border-radius: var(--oi-radius-small);
+        font-size: 11px;
+        color: var(--oi-ink-2);
+    }
+
+    .case-row-head .btn-text {
+        margin-left: auto;
+    }
+
+    .case-preview {
+        margin: 0;
+        font-family: var(--oi-font-mono);
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--oi-ink-2);
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .case-row-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+    }
+
+    .case-edit {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* 测试点内的文本框自适应内容高度, 最多 5 行, 超出后内部滚动 */
+    .case-edit .paste-area {
+        height: auto;
+        min-height: 32px;
+        padding: 6px 10px;
+        line-height: 1.5;
+        resize: none;
+        overflow-y: hidden;
+    }
+
+    .input-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .input-group .inp { flex: 1 1 auto; }
+
+    .inp {
+        width: 100%;
+        min-width: 0;
+        height: 32px;
+        padding: 0 10px;
+        color: var(--oi-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--oi-input);
+        border-radius: var(--oi-radius-small);
+        font-size: 13px;
+        line-height: 1;
+        transition: border-color 140ms cubic-bezier(.2, .8, .2, 1), box-shadow 140ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .inp:hover { border-color: var(--oi-ring); }
+
+    .inp:focus-visible {
+        outline: none;
+        border-color: var(--oi-ring);
+        box-shadow: 0 0 0 2px var(--oi-primary-soft);
+    }
+
+    .inp[readonly] { color: var(--oi-ink-2); cursor: default; }
+
+    .inp.mono, .mono { font-family: var(--oi-font-mono); }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid transparent;
+        border-radius: var(--oi-radius-small);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 140ms cubic-bezier(.2, .8, .2, 1), border-color 140ms cubic-bezier(.2, .8, .2, 1), color 140ms cubic-bezier(.2, .8, .2, 1), transform 140ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .btn svg { width: 14px; height: 14px; flex: 0 0 auto; }
+
+    .btn:focus-visible {
+        outline: none;
+        border-color: var(--oi-ring);
+        box-shadow: 0 0 0 2px var(--oi-primary-soft);
+    }
+
+    .btn:active { transform: translateY(1px); }
+
+    .btn-secondary {
+        flex: 0 0 auto;
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+        border-color: var(--oi-border);
+    }
+
+    .btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground); border-color: var(--oi-ring); }
+
+    .btn-primary {
+        color: var(--oi-primary-foreground);
+        background: var(--oi-primary);
+        border-color: var(--oi-primary);
+        font-weight: 600;
+    }
+
+    .btn-primary:hover { background: var(--vscode-button-hoverBackground); border-color: var(--vscode-button-hoverBackground); }
+
+    .btn-text {
+        height: 28px;
+        padding: 0 4px;
+        color: var(--oi-muted-foreground);
+        background: transparent;
+        border-color: transparent;
+    }
+
+    .btn-text:hover { color: var(--oi-foreground); }
+
+    .action-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .action-hint {
+        margin-left: auto;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--oi-ink-3);
+        white-space: nowrap;
+    }
+
+    .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .form-field label {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--oi-muted-foreground);
+        white-space: nowrap;
+    }
+
+    .result-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .result-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--oi-foreground);
+        white-space: nowrap;
+    }
+
+    .result-time {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--oi-ink-3);
+        white-space: nowrap;
+    }
+
+    .score {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    .score-value {
+        font-size: 32px;
+        font-weight: 600;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: var(--oi-foreground);
+    }
+
+    .score-label {
+        font-size: 12px;
+        color: var(--oi-muted-foreground);
+    }
+
+    .stat-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 0;
+        border-top: 1px solid var(--oi-border);
+        border-bottom: 1px solid var(--oi-border);
+    }
+
+    .stat {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+        font-family: var(--oi-font-mono);
+        font-size: 12px;
+        color: var(--oi-muted-foreground);
+        white-space: nowrap;
+    }
+
+    .stat b { font-weight: 600; color: var(--oi-foreground); }
+
+    .stat-sep {
+        flex: 0 0 auto;
+        width: 1px;
+        height: 12px;
+        background: var(--oi-border);
+    }
+
+    .test-list {
+        display: flex;
+        flex-direction: column;
+        font-family: var(--oi-font-mono);
+        font-size: 13px;
+    }
+
+    .test-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--oi-border);
+    }
+
+    .test-row:first-child { border-top: 1px solid var(--oi-border); }
+
+    .test-idx { color: var(--oi-muted-foreground); }
+
+    .test-time {
+        margin-left: auto;
+        color: var(--oi-ink-2);
+    }
+
+    @media (max-width: 560px) {
+        .page-grid { padding: 16px; }
+        .field-row { grid-template-columns: 84px minmax(0, 1fr); }
+        .action-hint { margin-left: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn, .inp { transition-duration: 0.01ms; }
+        .btn:active { transform: none; }
+    }
+
+    .modal-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.35);
+    }
+
+    .modal-mask[hidden] {
+        display: none;
+    }
+
+    .modal-box {
+        width: min(420px, calc(100% - 32px));
+        padding: 16px;
+        border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+        border-radius: 6px;
+        background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+        color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .modal-text {
+        margin: 0;
+        font-size: 13px;
+        word-break: break-all;
+    }
+
+    .modal-help {
+        margin: 8px 0 0;
+        font-size: 12px;
+        opacity: 0.8;
+    }
+
+    .modal-actions {
+        margin-top: 16px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .captcha-img {
+        display: block;
+        width: 180px;
+        height: 70px;
+        margin: 12px 0 8px;
+        object-fit: contain;
+        border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+        border-radius: 4px;
+        background: #fff;
+    }
+
+    .captcha-input {
+        width: 100%;
+        height: 28px;
+        padding: 0 8px;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 13px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+        border-radius: 4px;
+    }
+</style>
+    </main>
+    <div class="modal-mask" id="submit-modal" hidden>
+        <div class="modal-box" role="dialog" aria-modal="true">
+            <p class="modal-text" id="submit-modal-text"></p>
+            <p class="modal-help" id="submit-modal-help"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" type="button" id="submit-modal-cancel">取消</button>
+                <button class="btn btn-primary" type="button" id="submit-modal-ok" disabled>确定</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-mask" id="captcha-modal" hidden>
+        <div class="modal-box" role="dialog" aria-modal="true">
+            <p class="modal-text">该站点要求图形验证码, 请填写图片中的字符</p>
+            <img class="captcha-img" id="captcha-img" alt="验证码">
+            <input class="captcha-input" id="captcha-input" type="text" placeholder="输入验证码后回车">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" type="button" id="captcha-cancel">取消</button>
+                <button class="btn btn-primary" type="button" id="captcha-ok">提交</button>
+            </div>
+        </div>
+    </div>
+    <script nonce="__NONCE__">lucide.createIcons();</script>
+<script nonce="__NONCE__">
+    (function () {
+        const vscode = acquireVsCodeApi();
+        const root = document.documentElement;
+
+        function syncTheme() {
+            const isLight = document.body.classList.contains('vscode-light');
+            const isHighContrast = document.body.classList.contains('vscode-high-contrast');
+            root.classList.toggle('light', isLight || isHighContrast);
+            root.classList.toggle('dark', !(isLight || isHighContrast));
+        }
+
+        syncTheme();
+
+        const SIMPLE_FIELDS = {
+            problemDir: 'input-problem-dir',
+            sourceFile: 'input-source-file',
+            fetchUrl: 'fetch-url'
+        };
+
+        function setField(field, value) {
+            const el = document.getElementById(SIMPLE_FIELDS[field]);
+            if (el) {
+                el.value = value || '';
+            }
+            syncProblemRows();
+        }
+
+        function caseRows() {
+            return Array.prototype.slice.call(document.querySelectorAll('#case-list .case-row'));
+        }
+
+        function refreshCases() {
+            const rows = caseRows();
+            rows.forEach(function (row, i) {
+                const idx = row.querySelector('.case-idx');
+                if (idx) {
+                    idx.textContent = '#' + (i + 1);
+                }
+                row.querySelectorAll('[data-action^="browse-case"]').forEach(function (btn) {
+                    btn.setAttribute('data-index', String(i));
+                });
+            });
+            const empty = document.getElementById('case-empty');
+            if (empty) {
+                empty.style.display = rows.length ? 'none' : '';
+            }
+            refreshCount();
+            syncCaseChecks();
+            updateCaseHints();
+        }
+
+        function caseChecked(row) {
+            const cb = row.querySelector('.case-check');
+            return !cb || cb.checked;
+        }
+
+        // 同步标题行全选框: 全选 / 半选 / 未选
+        function syncCaseChecks() {
+            const all = document.getElementById('case-all');
+            if (!all) {
+                return;
+            }
+            const rows = caseRows();
+            const checked = rows.filter(caseChecked).length;
+            all.checked = rows.length > 0 && checked === rows.length;
+            all.indeterminate = checked > 0 && checked < rows.length;
+        }
+
+        function setAllCases(value) {
+            caseRows().forEach(function (row) {
+                const cb = row.querySelector('.case-check');
+                if (cb) {
+                    cb.checked = value;
+                }
+            });
+            syncCaseChecks();
+            updateCaseHints();
+        }
+
+        // 测试点总数 = 列表行数 + 粘贴区待加入的段数
+        function refreshCount() {
+            const el = document.getElementById('case-count');
+            if (!el) {
+                return;
+            }
+            const rows = caseRows().length;
+            const pending = pasteSegments().length;
+            if (rows + pending === 0) {
+                el.textContent = '';
+                return;
+            }
+            el.textContent = '共 ' + (rows + pending) + ' 个' +
+                (pending ? ' · 粘贴区 ' + pending + ' 个待加入' : '');
+        }
+
+        function countLines(text) {
+            if (!text) {
+                return 0;
+            }
+            return text.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n').length;
+        }
+
+        function refreshPreview(row) {
+            const pre = row.querySelector('.case-preview');
+            if (!pre) {
+                return;
+            }
+            const inText = row.querySelector('[data-field="input"]').value;
+            const outText = row.querySelector('[data-field="expected"]').value;
+            pre.textContent = '输入 ' + countLines(inText) + ' 行 · 输出 ' + countLines(outText) + ' 行';
+        }
+
+        // 测试点提示开关: 由扩展设置下发 (重复提示 / 输入冲突警告)
+        var CASE_RULES = { duplicateHint: true, conflictWarn: true };
+
+        // 比较用归一化: 统一换行, 去行尾空白与末尾空行
+        function normCaseText(text) {
+            return (text || '').replace(/\r\n/g, '\n').split('\n')
+                .map(function (line) { return line.replace(/[ \t]+$/, ''); })
+                .join('\n').replace(/\n+$/, '');
+        }
+
+        // 扫描测试点: 重复(输入输出都相同)与冲突(输入相同但输出不同); removeDup 为待删除行下标(保留序号小的)
+        function scanCases() {
+            const rows = caseRows();
+            const useAll = !rows.some(caseChecked);
+            const items = [];
+            rows.forEach(function (row, i) {
+                if (!useAll && !caseChecked(row)) {
+                    return;
+                }
+                const input = normCaseText(row.querySelector('[data-field="input"]').value);
+                const expected = normCaseText(row.querySelector('[data-field="expected"]').value);
+                if (input || expected) {
+                    items.push({ row: i, idx: i + 1, input: input, expected: expected });
+                }
+            });
+            const dupPairs = [];
+            const conflictPairs = [];
+            const removeDup = [];
+            for (let i = 0; i < items.length; i += 1) {
+                for (let j = i + 1; j < items.length; j += 1) {
+                    const a = items[i];
+                    const b = items[j];
+                    if (a.input !== b.input) {
+                        continue;
+                    }
+                    if (a.expected === b.expected) {
+                        dupPairs.push('#' + a.idx + ' 与 #' + b.idx);
+                        if (removeDup.indexOf(b.row) < 0) {
+                            removeDup.push(b.row);
+                        }
+                    } else if (a.input) {
+                        conflictPairs.push('#' + a.idx + ' 与 #' + b.idx);
+                    }
+                }
+            }
+            // 序号大的先删, 逐个删除时行下标不会移位
+            removeDup.sort(function (a, b) { return b - a; });
+            return { dupPairs: dupPairs, conflictPairs: conflictPairs, removeDup: removeDup };
+        }
+
+        // 检测重复测试点(输入输出都相同)与输入冲突(输入相同但输出不同)
+        function updateCaseHints() {
+            const hint = document.getElementById('case-hint');
+            const text = document.getElementById('case-hint-text');
+            const fix = document.getElementById('case-dup-fix');
+            if (!hint || !text) {
+                return;
+            }
+            const scan = scanCases();
+            const parts = [];
+            const warn = CASE_RULES.conflictWarn && scan.conflictPairs.length > 0;
+            if (warn) {
+                parts.push('输入相同但输出不同: ' + scan.conflictPairs.join(', '));
+            }
+            if (CASE_RULES.duplicateHint && scan.dupPairs.length) {
+                parts.push('重复的测试点: ' + scan.dupPairs.join(', '));
+            }
+            if (!parts.length) {
+                hint.hidden = true;
+                text.textContent = '';
+                hint.className = 'field-help case-hint';
+                if (fix) {
+                    fix.hidden = true;
+                }
+                return;
+            }
+            hint.hidden = false;
+            hint.className = 'field-help case-hint ' + (warn ? 't-error' : 't-warning');
+            text.textContent = parts.join('; ');
+            if (fix) {
+                fix.hidden = !(CASE_RULES.duplicateHint && scan.dupPairs.length > 0);
+            }
+        }
+
+        // 文本框自适应内容高度, 最多 5 行, 超出后内部滚动
+        function autoGrowArea(el) {
+            if (!el) {
+                return;
+            }
+            const cs = window.getComputedStyle(el);
+            let line = parseFloat(cs.lineHeight);
+            if (!line || isNaN(line)) {
+                line = parseFloat(cs.fontSize || '13') * 1.5;
+            }
+            const pad = parseFloat(cs.paddingTop || '0') + parseFloat(cs.paddingBottom || '0');
+            const border = parseFloat(cs.borderTopWidth || '0') + parseFloat(cs.borderBottomWidth || '0');
+            const max = line * 5 + pad + border;
+            el.style.height = 'auto';
+            const full = el.scrollHeight + border;
+            el.style.height = Math.min(full, max) + 'px';
+            el.style.overflowY = full > max ? 'auto' : 'hidden';
+        }
+
+        function autoGrowRow(row) {
+            row.querySelectorAll('.case-edit textarea').forEach(autoGrowArea);
+        }
+
+        // 导入型测试点: 内容被真正修改后标签加「修改过」
+        function refreshCaseTag(row) {
+            const oj = row.getAttribute('data-oj');
+            const tag = row.querySelector('.case-tag');
+            if (!oj || !tag) {
+                return;
+            }
+            const input = row.querySelector('[data-field="input"]');
+            const expected = row.querySelector('[data-field="expected"]');
+            if (!input || !expected) {
+                return;
+            }
+            const changed = input.value !== row.getAttribute('data-orig-in') ||
+                expected.value !== row.getAttribute('data-orig-out');
+            tag.textContent = oj + '导入' + (changed ? ' 修改过' : '');
+        }
+
+        // 与已有测试点完全相同的项: 返回最先匹配的序号(从 1 开始), 无则 0
+        function findDuplicateIndex(input, expected, exceptRow) {
+            const inText = normCaseText(input);
+            const outText = normCaseText(expected);
+            if (!inText && !outText) {
+                return 0;
+            }
+            const rows = caseRows();
+            for (let i = 0; i < rows.length; i += 1) {
+                const row = rows[i];
+                if (row === exceptRow) {
+                    continue;
+                }
+                if (normCaseText(row.querySelector('[data-field="input"]').value) === inText &&
+                    normCaseText(row.querySelector('[data-field="expected"]').value) === outText) {
+                    return i + 1;
+                }
+            }
+            return 0;
+        }
+
+        // 新增 count 行后检查是否与已有测试点重复, 重复则弹窗提示
+        function reportNewDuplicates(count) {
+            const rows = caseRows();
+            const start = Math.max(0, rows.length - count);
+            const dup = [];
+            for (let i = start; i < rows.length; i += 1) {
+                const row = rows[i];
+                const hit = findDuplicateIndex(
+                    row.querySelector('[data-field="input"]').value,
+                    row.querySelector('[data-field="expected"]').value,
+                    row
+                );
+                if (hit) {
+                    dup.push('#' + (i + 1) + ' 与 #' + hit);
+                }
+            }
+            if (dup.length) {
+                vscode.postMessage({ type: 'notify', level: 'warning', text: '重复的测试点: ' + dup.join(', ') });
+            }
+        }
+
+        function addCase(values) {
+            const list = document.getElementById('case-list');
+            if (!list) {
+                return;
+            }
+            const kind = (values && values.kind) || 'path';
+            const row = document.createElement('div');
+            row.className = 'case-row';
+            row.setAttribute('data-case', '');
+            row.setAttribute('data-kind', kind);
+            if (kind === 'text') {
+                const oj = (values && values.oj) || '';
+                const tag = (values && values.tag) || (oj ? oj + '导入' : '');
+                if (oj) {
+                    row.setAttribute('data-oj', oj);
+                }
+                row.innerHTML =
+                    '<div class="case-row-head">' +
+                        '<input type="checkbox" class="case-check" checked aria-label="选择该测试点">' +
+                        '<span class="case-idx"></span>' +
+                        (tag ? '<span class="case-tag">' + tag + '</span>' : '') +
+                        '<span class="case-row-actions">' +
+                            '<button class="btn btn-text" type="button" data-action="edit-case"><i data-lucide="chevron-up"></i><span>收起</span></button>' +
+                            '<button class="btn btn-text" type="button" data-action="remove-case"><i data-lucide="trash-2"></i><span>删除</span></button>' +
+                        '</span>' +
+                    '</div>' +
+                    '<pre class="case-preview" hidden></pre>' +
+                    '<div class="case-edit">' +
+                        '<textarea class="inp mono paste-area" data-field="input" rows="1" placeholder="输入数据"></textarea>' +
+                        '<textarea class="inp mono paste-area" data-field="expected" rows="1" placeholder="预期输出"></textarea>' +
+                    '</div>';
+                row.querySelector('[data-field="input"]').value = (values && values.input) || '';
+                row.querySelector('[data-field="expected"]').value = (values && values.expected) || '';
+                if (oj) {
+                    row.setAttribute('data-orig-in', row.querySelector('[data-field="input"]').value);
+                    row.setAttribute('data-orig-out', row.querySelector('[data-field="expected"]').value);
+                }
+                refreshPreview(row);
+            } else {
+                const tag = (values && values.tag) || '文件';
+                row.innerHTML =
+                    '<div class="case-row-head">' +
+                        '<input type="checkbox" class="case-check" checked aria-label="选择该测试点">' +
+                        '<span class="case-idx"></span>' +
+                        '<span class="case-tag">' + tag + '</span>' +
+                        '<button class="btn btn-text" type="button" data-action="remove-case"><i data-lucide="trash-2"></i><span>删除</span></button>' +
+                    '</div>' +
+                    '<div class="input-group">' +
+                        '<input class="inp mono" data-field="input" placeholder="输入文件, 如 a.in">' +
+                        '<button class="btn btn-secondary" type="button" data-action="browse-case-input"><i data-lucide="file-input"></i><span>浏览</span></button>' +
+                        '<button class="btn btn-text" type="button" data-action="open-case-file"><i data-lucide="external-link"></i><span>打开</span></button>' +
+                    '</div>' +
+                    '<div class="input-group">' +
+                        '<input class="inp mono" data-field="expected" placeholder="输出文件, 如 a.ans">' +
+                        '<button class="btn btn-secondary" type="button" data-action="browse-case-output"><i data-lucide="file-output"></i><span>浏览</span></button>' +
+                        '<button class="btn btn-text" type="button" data-action="open-case-file"><i data-lucide="external-link"></i><span>打开</span></button>' +
+                    '</div>';
+                if (values) {
+                    row.querySelector('[data-field="input"]').value = values.input || '';
+                    row.querySelector('[data-field="expected"]').value = values.expected || '';
+                }
+            }
+            list.appendChild(row);
+            refreshCases();
+            autoGrowRow(row);
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        function setCases(cases) {
+            const list = document.getElementById('case-list');
+            if (!list) {
+                return;
+            }
+            list.innerHTML = '';
+            (cases || []).forEach(function (c) {
+                addCase(c);
+            });
+            refreshCases();
+        }
+
+        function pasteMode() {
+            const el = document.querySelector('input[name="paste-mode"]:checked');
+            return el ? el.value : 'text';
+        }
+
+        function splitPaste(text, delim) {
+            if (!text) {
+                return [];
+            }
+            const normalized = text.replace(/\r\n/g, '\n');
+            if (!delim) {
+                return [normalized];
+            }
+            const parts = [];
+            let cur = [];
+            normalized.split('\n').forEach(function (line) {
+                if (line.trim() === delim) {
+                    parts.push(cur.join('\n'));
+                    cur = [];
+                } else {
+                    cur.push(line);
+                }
+            });
+            parts.push(cur.join('\n'));
+            while (parts.length > 1 && parts[parts.length - 1].trim() === '') {
+                parts.pop();
+            }
+            return parts;
+        }
+
+        // 按当前模式把粘贴区解析成测试点: 纯文本=1 个, 按分隔符分开=多段
+        function pasteSegments() {
+            const inputEl = document.getElementById('paste-input');
+            const outputEl = document.getElementById('paste-output');
+            if (!inputEl || !outputEl) {
+                return [];
+            }
+            const inText = inputEl.value;
+            const outText = outputEl.value;
+            if (!inText.trim() && !outText.trim()) {
+                return [];
+            }
+            if (pasteMode() !== 'split') {
+                return [{ input: inText, expected: outText }];
+            }
+            const delimEl = document.getElementById('paste-delim');
+            const delim = delimEl && delimEl.value.trim() ? delimEl.value.trim() : '===';
+            const ins = splitPaste(inText, delim);
+            const outs = splitPaste(outText, delim);
+            const n = Math.max(ins.length, outs.length);
+            const segs = [];
+            for (let i = 0; i < n; i += 1) {
+                segs.push({ input: ins[i] || '', expected: outs[i] || '' });
+            }
+            return segs;
+        }
+
+        function syncPasteMode() {
+            const wrap = document.getElementById('paste-delim-wrap');
+            if (wrap) {
+                wrap.style.display = pasteMode() === 'split' ? '' : 'none';
+            }
+            updatePasteHint();
+        }
+
+        function updatePasteHint() {
+            refreshCount();
+            const hint = document.getElementById('paste-hint');
+            if (!hint) {
+                return;
+            }
+            const segs = pasteSegments();
+            if (!segs.length) {
+                hint.textContent = '';
+                hint.className = 'paste-hint';
+                return;
+            }
+            if (pasteMode() === 'split') {
+                const delimEl = document.getElementById('paste-delim');
+                const delim = delimEl && delimEl.value.trim() ? delimEl.value.trim() : '===';
+                const ins = splitPaste(document.getElementById('paste-input').value, delim);
+                const outs = splitPaste(document.getElementById('paste-output').value, delim);
+                if (ins.length !== outs.length) {
+                    hint.textContent = '输入 ' + ins.length + ' 段 / 输出 ' + outs.length + ' 段, 数量不一致';
+                    hint.className = 'paste-hint t-error';
+                    return;
+                }
+                hint.textContent = '已识别 ' + segs.length + ' 个测试点';
+                hint.className = 'paste-hint t-success';
+                return;
+            }
+            hint.textContent = '作为 1 个测试点';
+            hint.className = 'paste-hint';
+        }
+
+        // 把粘贴区解析出的测试点追加到列表
+        function addPasteCases() {
+            const segs = pasteSegments();
+            if (!segs.length) {
+                setPasteHintText('请先粘贴数据', 't-error');
+                return;
+            }
+            if (pasteMode() === 'split') {
+                const delimEl = document.getElementById('paste-delim');
+                const delim = delimEl && delimEl.value.trim() ? delimEl.value.trim() : '===';
+                const ins = splitPaste(document.getElementById('paste-input').value, delim);
+                const outs = splitPaste(document.getElementById('paste-output').value, delim);
+                if (ins.length !== outs.length) {
+                    setPasteHintText('输入 ' + ins.length + ' 段 / 输出 ' + outs.length + ' 段, 数量不一致', 't-error');
+                    return;
+                }
+            }
+            segs.forEach(function (seg) {
+                addCase({ kind: 'text', input: seg.input, expected: seg.expected });
+            });
+            reportNewDuplicates(segs.length);
+            document.getElementById('paste-input').value = '';
+            document.getElementById('paste-output').value = '';
+            setPasteHintText('已添加 ' + segs.length + ' 个测试点', 't-success');
+        }
+
+        function setPasteHintText(text, kind) {
+            const hint = document.getElementById('paste-hint');
+            if (hint) {
+                hint.textContent = text || '';
+                hint.className = 'paste-hint' + (kind ? ' ' + kind : '');
+            }
+        }
+
+        function setFetchHint(text, kind) {
+            const hint = document.getElementById('fetch-hint');
+            if (hint) {
+                hint.textContent = text || '';
+                hint.className = 'field-help fetch-hint' + (kind ? ' ' + kind : '');
+            }
+        }
+
+        // 题目导航状态由预览面板同步: 填充选题下拉, 更新上/下一题可用性
+        function applyNavState(state) {
+            const problems = (state && state.problems) || [];
+            const sel = document.getElementById('nav-select');
+            if (sel) {
+                sel.innerHTML = '';
+                problems.forEach(function (p) {
+                    const opt = document.createElement('option');
+                    opt.value = p.num;
+                    opt.textContent = (p.num + ' ' + (p.title || '')).trim();
+                    if (state && p.num === state.num) {
+                        opt.selected = true;
+                    }
+                    sel.appendChild(opt);
+                });
+                sel.disabled = problems.length === 0;
+            }
+            const idx = state ? problems.findIndex(function (p) { return p.num === state.num; }) : -1;
+            const prev = document.getElementById('nav-prev');
+            const next = document.getElementById('nav-next');
+            if (prev) {
+                prev.disabled = !(idx > 0);
+            }
+            if (next) {
+                next.disabled = !(idx >= 0 && idx < problems.length - 1);
+            }
+            const numEl = document.getElementById('nav-num');
+            if (numEl && document.activeElement !== numEl) {
+                numEl.value = (state && state.num) || '';
+                // 竞赛题填比赛题号, 做题填题目编号
+                numEl.placeholder = problems.length ? '题号' : '题目编号';
+            }
+            // 普通题目(做题链接)没有题目列表, 隐藏上一题/选题/下一题
+            const plain = !!(state && state.plain);
+            ['nav-prev', 'nav-select', 'nav-next'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.hidden = plain;
+                }
+            });
+            // 竞赛题是「选择题目」, 普通题目只做「题目跳转」
+            const navLabel = document.querySelector('#nav-row .field-label');
+            if (navLabel) {
+                navLabel.textContent = plain ? '题目跳转' : '选择题目';
+            }
+            // 普通题目没有题目下拉, 用文字显示题目名
+            const titleEl = document.getElementById('nav-title');
+            if (titleEl) {
+                const text = (state && state.title) || '';
+                titleEl.hidden = !plain || !text;
+                titleEl.textContent = text;
+                titleEl.title = text;
+            }
+        }
+
+        // 网址导入前若面板已有测试点, 先弹窗询问是否删除旧的
+        let pendingFetch = null;
+
+        function startFetch(url, sampleMode) {
+            setFetchHint('抓取中...', '');
+            vscode.postMessage({ type: 'fetchProblem', url: url, sampleMode: sampleMode });
+        }
+
+        function requestFetch(url, sampleMode) {
+            const rows = caseRows();
+            if (rows.length) {
+                pendingFetch = { url: url, sampleMode: sampleMode };
+                vscode.postMessage({ type: 'confirmClearCases', count: rows.length });
+                return;
+            }
+            startFetch(url, sampleMode);
+        }
+
+        function applyClearCasesResult(remove) {
+            if (remove) {
+                caseRows().forEach(function (row) { row.remove(); });
+                refreshCases();
+            }
+            if (pendingFetch) {
+                startFetch(pendingFetch.url, pendingFetch.sampleMode);
+                pendingFetch = null;
+            }
+        }
+
+        // 面板抓取结果: 成功填入题目目录并提示, 失败展示错误; 内联模式把样例加入测试点
+        // 是否已存在同输入输出的测试点
+        function caseExists(input, expected) {
+            return caseRows().some(function (row) {
+                const inEl = row.querySelector('[data-field="input"]');
+                const outEl = row.querySelector('[data-field="expected"]');
+                return inEl && outEl && inEl.value === input && outEl.value === expected;
+            });
+        }
+
+        // 批量添加文件型测试点; dedupe 为真时跳过已存在的
+        function addCases(list, dedupe) {
+            let added = 0;
+            (list || []).forEach(function (c) {
+                if (dedupe && caseExists(c.input, c.expected)) {
+                    return;
+                }
+                addCase({ kind: 'path', input: c.input, expected: c.expected, tag: c.tag });
+                added += 1;
+            });
+            return added;
+        }
+
+        function applyFetchResult(summary) {
+            if (!summary) {
+                setFetchHint('抓取失败', 't-error');
+                return;
+            }
+            if (!summary.ok) {
+                setFetchHint('抓取失败: ' + (summary.error || '未知错误'), 't-error');
+                return;
+            }
+            // 识别/导入成功: 展开与题目相关的功能
+            identified = true;
+            if (summary.hasExtra) {
+                hasExtra = true;
+            }
+            syncProblemRows();
+            // 识别: 只显示题目信息, 不导入测试点
+            if (summary.identify) {
+                const parts = ['已识别 ' + (summary.name || '')];
+                if (summary.source) {
+                    parts.push('来源 ' + summary.source);
+                }
+                if (summary.freopenIn && summary.freopenOut) {
+                    parts.push('文件 IO: ' + summary.freopenIn + ' / ' + summary.freopenOut);
+                } else if (summary.fileIO === false) {
+                    parts.push('标准 IO');
+                }
+                if (summary.hasExtra) {
+                    parts.push('有更多样例');
+                }
+                if (Array.isArray(summary.samples)) {
+                    parts.push(summary.samples.length + ' 个样例');
+                }
+                setFetchHint(parts.join(' · '), 't-success');
+                return;
+            }
+            const tests = summary.tests || 0;
+            if (summary.inline && Array.isArray(summary.samples)) {
+                const oj = summary.source || '题目';
+                summary.samples.forEach(function (s) {
+                    addCase({ kind: 'text', oj: oj, input: s.in || '', expected: s.out || '' });
+                });
+                // 更多样例(只落文件)随内联一起回传的文件型测试点
+                if (Array.isArray(summary.cases)) {
+                    addCases(summary.cases, !!summary.dedupe);
+                }
+                const count = summary.samples.length;
+                if (count === 0) {
+                    setFetchHint('已导入 ' + (summary.name || '') + ' (无样例, 可能需要登录)', 't-error');
+                } else {
+                    setFetchHint('已导入 ' + (summary.name || '') + ' (' + count + ' 个样例已内联到测试点)', 't-success');
+                }
+                return;
+            }
+            // 「更多样例」后台/按钮回包: 只补文件型测试点, 已存在的跳过
+            if (summary.dedupe) {
+                const added = addCases(summary.cases || [], true);
+                setFetchHint(added ? ('更多样例: 已加入 ' + added + ' 个测试点') : '更多样例测试点已存在, 未重复加入', added ? 't-success' : '');
+                return;
+            }
+            const parts = ['已导入 ' + (summary.name || '')];
+            parts.push('(' + tests + ' 个测试点)');
+            if (summary.attachments) {
+                parts.push(summary.attachments + ' 个附件');
+            }
+            if (tests === 0) {
+                parts.push('(无测试点, 可能需要登录)');
+            }
+            setFetchHint(parts.join(' '), tests === 0 ? 't-error' : 't-success');
+            if (Array.isArray(summary.cases)) {
+                addCases(summary.cases, false);
+            }
+            if (summary.dir) {
+                setField('problemDir', summary.dir);
+            }
+        }
+
+        function setFreopenHint(text, kind) {
+            const hint = document.getElementById('freopen-hint');
+            if (hint) {
+                hint.textContent = text || '';
+                hint.className = 'field-help' + (kind ? ' ' + kind : '');
+            }
+        }
+
+        // 一键填写 freopen 结果: 成功提示写入的文件名, 失败展示原因
+        function applyFreopenResult(payload) {
+            if (payload && payload.ok) {
+                if (payload.removed === 'freopen') {
+                    setFreopenHint('已删除源码中的 freopen 语句', 't-success');
+                    return;
+                }
+                setFreopenHint('已写入 freopen: ' + payload.in + ' / ' + payload.out, 't-success');
+            } else {
+                const head = (payload && payload.removed === 'freopen') ? '删除失败: ' : '填写失败: ';
+                setFreopenHint(head + ((payload && payload.error) || '未知错误'), 't-error');
+            }
+        }
+
+        // 一键加速 IO 结果: 成功提示已插入, 失败展示原因
+        function applyFastIOResult(payload) {
+            if (payload && payload.ok) {
+                if (payload.removed === 'fastio') {
+                    setFreopenHint('已删除源码中的读写加速语句', 't-success');
+                    return;
+                }
+                setFreopenHint('已插入读写加速语句', 't-success');
+            } else {
+                const head = (payload && payload.removed === 'fastio') ? '删除失败: ' : '加速 IO 失败: ';
+                setFreopenHint(head + ((payload && payload.error) || '未知错误'), 't-error');
+            }
+        }
+
+        // 清除样例缓存结果: 成功提示删除数量, 失败与取消分别提示
+        function applyCacheResult(payload) {
+            if (!payload) {
+                setFetchHint('清除缓存失败', 't-error');
+                return;
+            }
+            if (payload.canceled) {
+                setFetchHint('已取消清除缓存', '');
+                return;
+            }
+            if (payload.ok) {
+                setFetchHint('已清除样例缓存 (' + (payload.removed || 0) + ' 个题目)', 't-success');
+            } else {
+                setFetchHint('清除缓存失败: ' + (payload.error || '未知错误'), 't-error');
+            }
+        }
+
+        // 原题功能提示行
+        function setOrigHint(text, kind) {
+            const el = document.getElementById('orig-hint');
+            if (el) {
+                el.textContent = text || '';
+                el.className = 'field-help orig-hint' + (kind ? ' ' + kind : '');
+            }
+        }
+
+        // 当前题目的原题来源
+        function applyOrigState(payload) {
+            if (!payload) {
+                return;
+            }
+            const refs = Array.isArray(payload.refs) ? payload.refs : [];
+            const sel = document.getElementById('orig-oj');
+            if (sel) {
+                const keep = sel.value;
+                sel.innerHTML = '';
+                refs.forEach(function (label, i) {
+                    const opt = document.createElement('option');
+                    opt.value = String(i);
+                    opt.textContent = label;
+                    sel.appendChild(opt);
+                });
+                sel.disabled = refs.length === 0;
+                if (keep && Number(keep) < refs.length) {
+                    sel.value = keep;
+                }
+            }
+            if (refs.length) {
+                setOrigHint('来源 ' + (payload.source || '') + ' · ' + refs.join(' / '), 't-success');
+            } else if (payload.source) {
+                setOrigHint('来源 ' + payload.source + ' (未识别出原题站点)', 't-error');
+            } else {
+                setOrigHint('当前题目没有来源信息 (用竞赛链接导入后可获取)');
+            }
+            // 没有来源信息时整栏隐藏
+            const show = refs.length > 0 || !!payload.source;
+            ['orig-row', 'orig-hint-row'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.hidden = !show;
+                }
+            });
+        }
+
+        // 原题下拉框选中的站点下标
+        function origIndex() {
+            const sel = document.getElementById('orig-oj');
+            const value = sel ? Number(sel.value) : 0;
+            return Number.isFinite(value) && value >= 0 ? value : 0;
+        }
+
+        // 提交后轮询到的评测结果
+        function applySubmitState(payload) {
+            if (!payload) {
+                return;
+            }
+            if (payload.pending) {
+                setSubmitHint('提交号 ' + payload.solutionId + ' · 评测中...', '');
+                return;
+            }
+            const bits = [];
+            if (payload.timeMs) {
+                bits.push(payload.timeMs + 'ms');
+            }
+            if (payload.memoryKb) {
+                bits.push(Math.round(payload.memoryKb / 1024 * 100) / 100 + 'MB');
+            }
+            const ok = payload.text === 'Accepted';
+            setSubmitHint('提交号 ' + payload.solutionId + ' · ' + (payload.text || '') + (bits.length ? ' · ' + bits.join(' / ') : ''),
+                ok ? 't-success' : 't-error');
+            if (!ok) {
+                showCopySource(true);
+            }
+        }
+
+        function setSubmitHint(text, kind) {
+            const hint = document.getElementById('submit-hint');
+            if (hint) {
+                hint.textContent = text || '';
+                hint.className = 'field-help submit-hint' + (kind ? ' ' + kind : '');
+            }
+        }
+
+        // 手动复制按钮: 仅在提交失败时显示, 便于复制源码手动提交
+        function showCopySource(visible) {
+            ['copy-source-btn', 'open-submit-btn'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.hidden = !visible;
+                }
+            });
+            const btn = document.getElementById('copy-source-btn');
+            const label = btn ? btn.querySelector('span') : null;
+            if (label) {
+                label.textContent = '手动复制';
+            }
+        }
+
+        // 面板提交结果: 成功提示题目ID与提交号, 失败展示错误
+        function applySubmitResult(summary) {
+            if (!summary || !summary.ok) {
+                const err = (summary && summary.error) || '未知错误';
+                // 后端可能已带「提交失败」前缀, 避免叠加两层
+                setSubmitHint(/^提交失败/.test(err) ? err : ('提交失败: ' + err), 't-error');
+                showCopySource(true);
+                return;
+            }
+            showCopySource(false);
+            // 原题提交: 直接显示回传文案
+            if (summary.message) {
+                setSubmitHint(summary.message, 't-success');
+                return;
+            }
+            const pid = summary.problemId !== undefined ? summary.problemId : '未知';
+            const sid = summary.solutionId !== undefined ? summary.solutionId : '';
+            setSubmitHint('已提交 ' + pid + ', 提交号 ' + sid, 't-success');
+        }
+
+        // 复制源码到剪贴板的结果
+        function applyCopySourceResult(payload) {
+            const btn = document.getElementById('copy-source-btn');
+            if (!payload || !payload.ok) {
+                setSubmitHint('复制失败: ' + ((payload && payload.error) || '未知错误'), 't-error');
+                return;
+            }
+            const label = btn ? btn.querySelector('span') : null;
+            if (label) {
+                label.textContent = '已复制';
+                window.setTimeout(function () {
+                    label.textContent = '手动复制';
+                }, 1500);
+            }
+            setSubmitHint('源码已复制到剪贴板', 't-success');
+        }
+
+        // 打开提交页结果
+        function applyOpenSubmitResult(payload) {
+            if (!payload || !payload.ok) {
+                setSubmitHint('打开提交页失败: ' + ((payload && payload.error) || '未知错误'), 't-error');
+                return;
+            }
+            setSubmitHint('已复制源码并打开提交页, 粘贴(Ctrl+V)后提交即可', 't-success');
+        }
+
+        // 图形验证码弹窗: 站点(如洛谷)直连提交要求验证码时显示图片等用户输入
+        function openCaptchaModal(image) {
+            const mask = document.getElementById('captcha-modal');
+            const img = document.getElementById('captcha-img');
+            const input = document.getElementById('captcha-input');
+            if (!mask || !img) {
+                return;
+            }
+            img.src = image || '';
+            if (input) {
+                input.value = '';
+            }
+            mask.hidden = false;
+            if (input) {
+                input.focus();
+            }
+        }
+
+        function closeCaptchaModal() {
+            const mask = document.getElementById('captcha-modal');
+            if (mask) {
+                mask.hidden = true;
+            }
+        }
+
+        function submitCaptcha() {
+            const input = document.getElementById('captcha-input');
+            const value = input ? input.value.trim() : '';
+            if (!value) {
+                if (input) {
+                    input.focus();
+                }
+                return;
+            }
+            closeCaptchaModal();
+            setSubmitHint('验证码提交中...', '');
+            vscode.postMessage({ type: 'captchaSubmit', text: value });
+        }
+
+        // 提交前确认弹窗: 按次数逐个弹出, 确定按钮强制等待 N 秒
+        let submitConfirm = null;
+        let submitHoldTimer = null;
+
+        function closeSubmitModal() {
+            const mask = document.getElementById('submit-modal');
+            if (mask) {
+                mask.hidden = true;
+            }
+            if (submitHoldTimer) {
+                clearInterval(submitHoldTimer);
+                submitHoldTimer = null;
+            }
+        }
+
+        function runSubmitConfirmDialog() {
+            const payload = submitConfirm;
+            if (!payload || payload.remain <= 0) {
+                closeSubmitModal();
+                submitConfirm = null;
+                const fileEl = document.getElementById('input-source-file');
+                setSubmitHint('提交中...', '');
+                showCopySource(false);
+                const urlEl = document.getElementById('fetch-url');
+                vscode.postMessage({
+                    type: 'submitSolution',
+                    file: fileEl ? fileEl.value.trim() : '',
+                    url: urlEl ? urlEl.value.trim() : ''
+                });
+                return;
+            }
+            const mask = document.getElementById('submit-modal');
+            const textEl = document.getElementById('submit-modal-text');
+            const helpEl = document.getElementById('submit-modal-help');
+            const okBtn = document.getElementById('submit-modal-ok');
+            if (!mask || !textEl || !helpEl || !okBtn) {
+                return;
+            }
+            const total = payload.count || 1;
+            const step = total - payload.remain + 1;
+            const texts = Array.isArray(payload.texts) ? payload.texts : [];
+            textEl.textContent = texts[step - 1] || payload.text || (payload.ac ? '你要提交了吗?' : '还没有 AC, 确定要提交吗?');
+            // 只有第一次确认需要等待
+            let left = step === 1 ? Math.max(0, Math.floor(payload.seconds || 0)) : 0;
+            okBtn.disabled = left > 0;
+            const prefix = total > 1 ? '第 ' + step + ' / ' + total + ' 次确认' : '';
+            helpEl.textContent = prefix + (left > 0 ? (prefix ? ' · ' : '') + left + ' 秒后可确定' : '');
+            if (submitHoldTimer) {
+                clearInterval(submitHoldTimer);
+                submitHoldTimer = null;
+            }
+            if (left > 0) {
+                submitHoldTimer = setInterval(function () {
+                    left -= 1;
+                    okBtn.disabled = left > 0;
+                    helpEl.textContent = prefix + (left > 0 ? (prefix ? ' · ' : '') + left + ' 秒后可确定' : '');
+                    if (left <= 0) {
+                        clearInterval(submitHoldTimer);
+                        submitHoldTimer = null;
+                    }
+                }, 1000);
+            }
+            mask.hidden = false;
+        }
+
+        // 扩展回传的确认参数: 次数/文案/强制等待秒数
+        function startSubmitConfirm(payload) {
+            const cfg = payload || {};
+            submitConfirm = {
+                count: Math.max(1, cfg.count || 1),
+                remain: Math.max(1, cfg.count || 1),
+                seconds: cfg.seconds || 0,
+                text: cfg.text || '',
+                ac: !!cfg.ac
+            };
+            runSubmitConfirmDialog();
+        }
+
+        (function bindSubmitModal() {
+            const okBtn = document.getElementById('submit-modal-ok');
+            const cancelBtn = document.getElementById('submit-modal-cancel');
+            if (okBtn) {
+                okBtn.addEventListener('click', function () {
+                    if (okBtn.disabled || !submitConfirm) {
+                        return;
+                    }
+                    submitConfirm.remain -= 1;
+                    runSubmitConfirmDialog();
+                });
+            }
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function () {
+                    submitConfirm = null;
+                    closeSubmitModal();
+                    setSubmitHint('已取消提交.', '');
+                    showCopySource(false);
+                });
+            }
+        })();
+
+        function collectCases() {
+            const rows = caseRows();
+            const picked = rows.filter(caseChecked);
+            // 未勾选任何测试点时, 视为全部运行
+            return (picked.length ? picked : rows).map(function (row) {
+                return {
+                    kind: row.getAttribute('data-kind') || 'path',
+                    input: row.querySelector('[data-field="input"]').value,
+                    expected: row.querySelector('[data-field="expected"]').value
+                };
+            });
+        }
+
+        function applyPaths(payload) {
+            if (typeof payload.problemDir === 'string') {
+                setField('problemDir', payload.problemDir);
+            }
+            if (typeof payload.sourceFile === 'string') {
+                setField('sourceFile', payload.sourceFile);
+            }
+            if (Array.isArray(payload.cases)) {
+                setCases(payload.cases);
+            }
+        }
+
+        function caseDir() {
+            const dir = document.getElementById('input-problem-dir').value.trim();
+            if (dir) {
+                return dir;
+            }
+            const src = document.getElementById('input-source-file').value.trim();
+            if (!src) {
+                return '';
+            }
+            const i = Math.max(src.lastIndexOf('\\'), src.lastIndexOf('/'));
+            return i > 0 ? src.slice(0, i) : '';
+        }
+
+        function collectFields() {
+            return {
+                problemDir: document.getElementById('input-problem-dir').value,
+                sourceFile: document.getElementById('input-source-file').value,
+                cases: collectCases(),
+                pasteCases: pasteSegments()
+            };
+        }
+
+        window.addEventListener('message', function (event) {
+            const message = event.data;
+            if (!message || typeof message !== 'object') {
+                return;
+            }
+            if (message.type === 'theme') {
+                syncTheme();
+                return;
+            }
+            if (message.type === 'paths') {
+                applyPaths(message);
+                return;
+            }
+            if (message.type === 'path-value') {
+                setField(message.field, message.value);
+                return;
+            }
+            if (message.type === 'fetchResult') {
+                applyFetchResult(message.payload);
+                return;
+            }
+            if (message.type === 'clearCasesResult') {
+                applyClearCasesResult(!!message.remove);
+                return;
+            }
+            if (message.type === 'navState') {
+                applyNavState(message.payload);
+                return;
+            }
+            if (message.type === 'origState') {
+                applyOrigState(message.payload);
+                return;
+            }
+            if (message.type === 'origHint') {
+                setOrigHint((message.payload && message.payload.text) || '', (message.payload && message.payload.kind) || '');
+                return;
+            }
+            if (message.type === 'submitResult') {
+                applySubmitResult(message.payload);
+                return;
+            }
+            if (message.type === 'submitState') {
+                applySubmitState(message.payload);
+                return;
+            }
+            if (message.type === 'submitConfirm') {
+                startSubmitConfirm(message.payload);
+                return;
+            }
+            if (message.type === 'copySourceResult') {
+                applyCopySourceResult(message.payload);
+                return;
+            }
+            if (message.type === 'openSubmitResult') {
+                applyOpenSubmitResult(message.payload);
+                return;
+            }
+            if (message.type === 'captcha') {
+                openCaptchaModal(message.payload && message.payload.image);
+                return;
+            }
+            if (message.type === 'freopenResult') {
+                applyFreopenResult(message.payload);
+                return;
+            }
+            if (message.type === 'fastIOResult') {
+                applyFastIOResult(message.payload);
+                return;
+            }
+            if (message.type === 'cacheResult') {
+                applyCacheResult(message.payload);
+                return;
+            }
+            if (message.type === 'caseRules') {
+                const rules = message.payload || {};
+                CASE_RULES.duplicateHint = rules.duplicateHint !== false;
+                CASE_RULES.conflictWarn = rules.conflictWarn !== false;
+                updateCaseHints();
+                return;
+            }
+            if (message.type === 'case-path-value') {
+                const row = caseRows()[message.index];
+                if (row) {
+                    const el = row.querySelector('[data-field="' + message.field + '"]');
+                    if (el) {
+                        el.value = message.value || '';
+                    }
+                }
+                return;
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            const actionEl = event.target.closest('[data-action]');
+            if (actionEl) {
+                event.preventDefault();
+                const action = actionEl.getAttribute('data-action');
+                if (action === 'run-judge') {
+                    // 粘贴区还有数据时先并入列表, 保证列表数量与实际评测数量一致
+                    if (pasteSegments().length) {
+                        addPasteCases();
+                        if (pasteSegments().length) {
+                            return;
+                        }
+                    }
+                    // 未勾选任何测试点时自动全选后运行
+                    const rows = caseRows();
+                    if (rows.length && !rows.some(caseChecked)) {
+                        setAllCases(true);
+                    }
+                    vscode.postMessage(Object.assign({ type: 'run-judge' }, collectFields()));
+                } else if (action === 'remove-selected-cases') {
+                    const picked = caseRows().filter(caseChecked);
+                    if (!picked.length) {
+                        vscode.postMessage({ type: 'notify', level: 'info', text: '请先勾选要删除的测试点' });
+                        return;
+                    }
+                    picked.forEach(function (row) { row.remove(); });
+                    refreshCases();
+                } else if (action === 'open-case-file') {
+                    const group = actionEl.closest('.input-group');
+                    const field = group ? group.querySelector('[data-field]') : null;
+                    const value = field ? field.value.trim() : '';
+                    if (!value) {
+                        vscode.postMessage({ type: 'notify', level: 'info', text: '请先填写文件路径' });
+                        return;
+                    }
+                    const dirInput = document.getElementById('input-problem-dir');
+                    vscode.postMessage({ type: 'openCaseFile', file: value, dir: dirInput ? dirInput.value.trim() : '' });
+                } else if (action === 'add-paste') {
+                    addPasteCases();
+                } else if (action === 'edit-case') {
+                    const row = actionEl.closest('.case-row');
+                    if (row) {
+                        const edit = row.querySelector('.case-edit');
+                        const preview = row.querySelector('.case-preview');
+                        const expanded = !edit.hidden;
+                        edit.hidden = expanded;
+                        preview.hidden = !expanded;
+                        row.classList.toggle('collapsed', expanded);
+                        const label = actionEl.querySelector('span');
+                        if (label) {
+                            label.textContent = expanded ? '展开' : '收起';
+                        }
+                        if (expanded) {
+                            refreshPreview(row);
+                        } else {
+                            autoGrowRow(row);
+                        }
+                    }
+                } else if (action === 'remove-case') {
+                    const row = actionEl.closest('.case-row');
+                    if (row) {
+                        row.remove();
+                        refreshCases();
+                    }
+                } else if (action === 'browse-case-input' || action === 'browse-case-output') {
+                    vscode.postMessage({
+                        type: action,
+                        index: Number(actionEl.getAttribute('data-index')) || 0,
+                        dir: caseDir()
+                    });
+                } else {
+                    vscode.postMessage({ type: action });
+                }
+                return;
+            }
+            const navEl = event.target.closest('[data-dom-id]');
+            if (navEl) {
+                event.preventDefault();
+                vscode.postMessage({ type: 'navigate', domId: navEl.getAttribute('data-dom-id') });
+            }
+        }, true);
+
+        ['paste-input', 'paste-output', 'paste-delim'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updatePasteHint);
+            }
+        });
+        document.querySelectorAll('input[name="paste-mode"]').forEach(function (el) {
+            el.addEventListener('change', syncPasteMode);
+        });
+        syncPasteMode();
+
+        const cookieHelpBtn = document.getElementById('cookie-help-btn');
+        if (cookieHelpBtn) {
+            cookieHelpBtn.addEventListener('click', function () {
+                vscode.postMessage({ type: 'cookieHelp' });
+            });
+        }
+
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function () {
+                setSubmitHint('', '');
+                showCopySource(false);
+                vscode.postMessage({ type: 'prepareSubmit' });
+            });
+            // 右键一键提交: 不提交, 只把源码复制到剪贴板
+            submitBtn.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                const row = document.getElementById('submit-hint-row');
+                if (row) {
+                    row.hidden = false;
+                }
+                const fileEl = document.getElementById('input-source-file');
+                vscode.postMessage({
+                    type: 'copySource',
+                    file: fileEl ? fileEl.value.trim() : ''
+                });
+            });
+        }
+
+        const copySourceBtn = document.getElementById('copy-source-btn');
+        if (copySourceBtn) {
+            copySourceBtn.addEventListener('click', function () {
+                const fileEl = document.getElementById('input-source-file');
+                vscode.postMessage({
+                    type: 'copySource',
+                    file: fileEl ? fileEl.value.trim() : ''
+                });
+            });
+        }
+
+        // 验证码弹窗按钮
+        const captchaOkBtn = document.getElementById('captcha-ok');
+        if (captchaOkBtn) {
+            captchaOkBtn.addEventListener('click', submitCaptcha);
+        }
+        const captchaCancelBtn = document.getElementById('captcha-cancel');
+        if (captchaCancelBtn) {
+            captchaCancelBtn.addEventListener('click', function () {
+                closeCaptchaModal();
+                vscode.postMessage({ type: 'captchaCancel' });
+            });
+        }
+        const captchaInputEl = document.getElementById('captcha-input');
+        if (captchaInputEl) {
+            captchaInputEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    submitCaptcha();
+                }
+            });
+        }
+
+        // 打开提交页: 同时把源码复制到剪贴板, 粘贴即可提交
+        const openSubmitBtn = document.getElementById('open-submit-btn');
+        if (openSubmitBtn) {
+            openSubmitBtn.addEventListener('click', function () {
+                const fileEl = document.getElementById('input-source-file');
+                const urlEl = document.getElementById('fetch-url');
+                vscode.postMessage({
+                    type: 'openSubmit',
+                    file: fileEl ? fileEl.value.trim() : '',
+                    url: urlEl ? urlEl.value.trim() : ''
+                });
+            });
+        }
+
+        // 原题功能: 查看 / 预览 / 样例 / 复制链接 / 提交
+        [['orig-open', 'origOpen'], ['orig-preview', 'origPreview'], ['orig-samples', 'origSamples'],
+         ['orig-link', 'origLink'], ['orig-submit', 'origSubmit']].forEach(function (pair) {
+            const btn = document.getElementById(pair[0]);
+            if (!btn) {
+                return;
+            }
+            btn.addEventListener('click', function () {
+                const fileEl = document.getElementById('input-source-file');
+                if (pair[1] === 'origSubmit') {
+                    setSubmitHint('', '');
+                }
+                vscode.postMessage({
+                    type: pair[1],
+                    file: fileEl ? fileEl.value.trim() : '',
+                    oj: origIndex()
+                });
+            });
+        });
+
+        const freopenBtn = document.getElementById('freopen-btn');
+        if (freopenBtn) {
+            freopenBtn.addEventListener('click', function () {
+                const fileEl = document.getElementById('input-source-file');
+                const dirEl = document.getElementById('input-problem-dir');
+                setFreopenHint('写入中...', '');
+                vscode.postMessage({
+                    type: 'applyFreopen',
+                    file: fileEl ? fileEl.value.trim() : '',
+                    dir: dirEl ? dirEl.value.trim() : ''
+                });
+            });
+            // 右键填 freopen: 改为从源码中删除 freopen 语句
+            freopenBtn.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                const fileEl = document.getElementById('input-source-file');
+                setFreopenHint('删除中...', '');
+                vscode.postMessage({
+                    type: 'removeFreopen',
+                    file: fileEl ? fileEl.value.trim() : ''
+                });
+            });
+        }
+
+        const fastioBtn = document.getElementById('fastio-btn');
+        if (fastioBtn) {
+            fastioBtn.addEventListener('click', function () {
+                const fileEl = document.getElementById('input-source-file');
+                setFreopenHint('写入中...', '');
+                vscode.postMessage({
+                    type: 'applyFastIO',
+                    file: fileEl ? fileEl.value.trim() : ''
+                });
+            });
+            // 右键加速 IO: 改为从源码中删除读写加速语句
+            fastioBtn.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                const fileEl = document.getElementById('input-source-file');
+                setFreopenHint('删除中...', '');
+                vscode.postMessage({
+                    type: 'removeFastIO',
+                    file: fileEl ? fileEl.value.trim() : ''
+                });
+            });
+        }
+
+        const extraBtn = document.getElementById('extra-btn');
+        if (extraBtn) {
+            extraBtn.addEventListener('click', function () {
+                setFetchHint('下载更多样例中...', '');
+                vscode.postMessage({ type: 'fetchExtra' });
+            });
+        }
+
+        // 是否已识别/导入当前题目: 未识别时隐藏与题目相关的功能
+        let identified = false;
+
+        // 是否识别到「更多样例」: 决定样例方式是否显示
+        let hasExtra = false;
+
+        // 未识别时隐藏 选择题目/一键提交/提交提示; 未识别到更多样例时隐藏样例方式(清除缓存按钮始终可用)
+        function syncProblemRows() {
+            const urlEl = document.getElementById('fetch-url');
+            const hasUrl = !!(urlEl && urlEl.value.trim());
+            const ready = identified && hasUrl;
+            // 原题栏由来源信息决定显隐(见 applyOrigState), 这里只管导航与提交相关
+            ['nav-row', 'submit-hint-row', 'submit-btn'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.hidden = !ready;
+                }
+            });
+            const sampleRow = document.getElementById('sample-row');
+            if (sampleRow) {
+                sampleRow.hidden = !(identified && hasExtra);
+            }
+        }
+        const fetchUrlEl = document.getElementById('fetch-url');
+        if (fetchUrlEl) {
+            // 改动网址即视为未识别, 相关功能先收起
+            fetchUrlEl.addEventListener('input', function () {
+                identified = false;
+                hasExtra = false;
+                syncProblemRows();
+            });
+        }
+        syncProblemRows();
+
+        // 识别: 只抓取题目信息(题目名/来源/文件 IO/更多样例), 不导入测试点
+        const identifyBtn = document.getElementById('identify-btn');
+        if (identifyBtn) {
+            identifyBtn.addEventListener('click', function () {
+                const urlEl = document.getElementById('fetch-url');
+                const url = urlEl ? urlEl.value.trim() : '';
+                if (!url) {
+                    setFetchHint('请输入题目网址', 't-error');
+                    return;
+                }
+                setFetchHint('识别中...', '');
+                vscode.postMessage({ type: 'fetchProblem', url: url, sampleMode: 'identify' });
+            });
+        }
+
+        // 刷新题目: 清掉该题抓取缓存后重新识别
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function () {
+                const urlEl = document.getElementById('fetch-url');
+                const url = urlEl ? urlEl.value.trim() : '';
+                if (!url) {
+                    setFetchHint('请输入题目网址', 't-error');
+                    return;
+                }
+                setFetchHint('刷新中...', '');
+                vscode.postMessage({ type: 'refreshProblem', url: url });
+            });
+        }
+
+        const fetchBtn = document.getElementById('fetch-btn');
+        if (fetchBtn) {
+            fetchBtn.addEventListener('click', function () {
+                const urlEl = document.getElementById('fetch-url');
+                const url = urlEl ? urlEl.value.trim() : '';
+                if (!url) {
+                    setFetchHint('请输入题目网址', 't-error');
+                    return;
+                }
+                const modeEl = document.querySelector('input[name="fetch-sample-mode"]:checked');
+                const sampleMode = modeEl ? modeEl.value : 'inline';
+                requestFetch(url, sampleMode);
+            });
+        }
+
+        const clearCacheBtn = document.getElementById('clear-cache-btn');
+        if (clearCacheBtn) {
+            clearCacheBtn.addEventListener('click', function () {
+                setFetchHint('清除中...', '');
+                vscode.postMessage({ type: 'clearCache' });
+            });
+        }
+
+        const navPrevBtn = document.getElementById('nav-prev');
+        if (navPrevBtn) {
+            navPrevBtn.addEventListener('click', function () { vscode.postMessage({ type: 'navPrev' }); });
+        }
+        const navNextBtn = document.getElementById('nav-next');
+        if (navNextBtn) {
+            navNextBtn.addEventListener('click', function () { vscode.postMessage({ type: 'navNext' }); });
+        }
+        const navSel = document.getElementById('nav-select');
+        if (navSel) {
+            navSel.addEventListener('change', function () {
+                vscode.postMessage({ type: 'navGo', num: navSel.value });
+            });
+        }
+        function navGo() {
+            const el = document.getElementById('nav-num');
+            const value = el ? el.value.trim() : '';
+            if (value) {
+                vscode.postMessage({ type: 'navGo', num: value });
+            }
+        }
+        const navNumEl = document.getElementById('nav-num');
+        if (navNumEl) {
+            navNumEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    navGo();
+                }
+            });
+        }
+        const navGotoBtn = document.getElementById('nav-goto');
+        if (navGotoBtn) {
+            navGotoBtn.addEventListener('click', navGo);
+        }
+        // 一键删除重复测试点: 同组保留序号最小的, 删除序号大的
+        const caseDupFix = document.getElementById('case-dup-fix');
+        if (caseDupFix) {
+            caseDupFix.addEventListener('click', function () {
+                const scan = scanCases();
+                if (!scan.removeDup.length) {
+                    return;
+                }
+                const rows = caseRows();
+                scan.removeDup.forEach(function (i) {
+                    if (rows[i]) {
+                        rows[i].remove();
+                    }
+                });
+                refreshCount();
+                refreshCases();
+            });
+        }
+
+        const caseToggle = document.getElementById('case-toggle');
+        if (caseToggle) {
+            caseToggle.addEventListener('click', function () {
+                const body = document.getElementById('case-body');
+                if (!body) {
+                    return;
+                }
+                body.hidden = !body.hidden;
+                caseToggle.setAttribute('data-collapsed', body.hidden ? 'true' : 'false');
+                const label = caseToggle.querySelector('span');
+                if (label) {
+                    label.textContent = body.hidden ? '展开' : '收起';
+                }
+            });
+        }
+        // 测试点勾选: 标题行全选(三态) + 行内复选框
+        const caseAllEl = document.getElementById('case-all');
+        if (caseAllEl) {
+            caseAllEl.addEventListener('change', function () {
+                setAllCases(caseAllEl.checked);
+            });
+        }
+        const caseListEl = document.getElementById('case-list');
+        if (caseListEl) {
+            caseListEl.addEventListener('change', function (e) {
+                const target = e.target;
+                if (target && target.classList && target.classList.contains('case-check')) {
+                    syncCaseChecks();
+                    updateCaseHints();
+                }
+            });
+            caseListEl.addEventListener('input', function (e) {
+                const target = e.target;
+                if (target && target.tagName === 'TEXTAREA' && target.closest('.case-edit')) {
+                    autoGrowArea(target);
+                    refreshCaseTag(target.closest('.case-row'));
+                }
+                updateCaseHints();
+            });
+        }
+        const navPreviewBtn = document.getElementById('nav-preview');
+        if (navPreviewBtn) {
+            navPreviewBtn.addEventListener('click', function () {
+                const urlEl = document.getElementById('fetch-url');
+                vscode.postMessage({ type: 'openPreview', url: urlEl ? urlEl.value.trim() : '' });
+            });
+        }
+
+        vscode.postMessage({ type: 'ready' });
+    })();
+</script>
+</body>
+</html>

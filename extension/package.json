@@ -1,0 +1,336 @@
+{
+    "name": "oi-helper",
+    "displayName": "OI Helper",
+    "description": "调用 oi-judge 进行 OI 题目评测",
+    "version": "0.0.1",
+    "publisher": "oihelper",
+    "license": "MIT",
+    "private": true,
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "main": "./out/extension.js",
+    "activationEvents": [
+        "onView:oiHelperPanel",
+        "onView:oiHelperResults",
+        "onView:oiHelperContest",
+        "onCommand:oiHelper.openPanel"
+    ],
+    "contributes": {
+        "commands": [
+            {
+                "command": "oiHelper.openPanel",
+                "title": "打开评测面板",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.judgeFile",
+                "title": "OI 评测",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.judgeProblem",
+                "title": "评测题目目录",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.fetchProblem",
+                "title": "从网址导入题目",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.previewProblem",
+                "title": "预览题目 (Markdown)",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.submitSolution",
+                "title": "一键提交到 xmoj",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.setXmojAccount",
+                "title": "设置 xmoj 账号",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.cookieHelp",
+                "title": "Cookie 帮助",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.selectEnv",
+                "title": "选择评测环境",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.setJobs",
+                "title": "设置并行度",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.refresh",
+                "title": "刷新结果",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.openContest",
+                "title": "打开 ICPC 比赛面板",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.loadContest",
+                "title": "载入比赛目录",
+                "category": "OI Helper"
+            }
+        ],
+        "menus": {
+            "explorer/context": [
+                {
+                    "command": "oiHelper.judgeFile",
+                    "when": "resourceExtname == .cpp",
+                    "group": "navigation"
+                }
+            ],
+            "editor/title/context": [
+                {
+                    "command": "oiHelper.judgeFile",
+                    "when": "resourceExtname == .cpp",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "oiHelper",
+                    "title": "OI Helper",
+                    "icon": "media/oi-helper.svg"
+                }
+            ]
+        },
+        "views": {
+            "oiHelper": [
+                {
+                    "id": "oiHelperPanel",
+                    "name": "评测面板",
+                    "type": "webview"
+                },
+                {
+                    "id": "oiHelperContest",
+                    "name": "ICPC 比赛",
+                    "type": "webview"
+                },
+                {
+                    "id": "oiHelperResults",
+                    "name": "评测结果",
+                    "type": "webview"
+                }
+            ]
+        },
+        "configuration": [
+            {
+                "title": "OI Helper: 评测",
+                "properties": {
+                "oiHelper.judgePath": {
+                    "type": "string",
+                    "default": "d:\\OIHelpper\\core\\build\\oi-judge.exe",
+                    "description": "oi-judge 可执行文件路径. 默认指向本地固定目录, 便于跨工作区使用; 留空则在 workspace 下查找 core/build/oi-judge(.exe)."
+                },
+                "oiHelper.xmojUser": {
+                    "type": "string",
+                    "default": "",
+                    "description": "xmoj 账号, 用于抓取需要登录的题目."
+                },
+                "oiHelper.xmojPassword": {
+                    "type": "string",
+                    "default": "",
+                    "description": "xmoj 密码, 明文保存在设置中, 仅本机使用."
+                },
+                "oiHelper.env": {
+                    "type": "string",
+                    "enum": [
+                        "auto",
+                        "wsl",
+                        "mingw"
+                    ],
+                    "default": "auto",
+                    "description": "编译运行环境."
+                },
+                "oiHelper.jobs": {
+                    "type": "number",
+                    "default": 1,
+                    "minimum": 1,
+                    "description": "并行度."
+                }
+                }
+            },
+            {
+                "title": "OI Helper: 评测与比赛",
+                "properties": {
+                "oiHelper.timeLimit": {
+                    "type": "number",
+                    "default": 1000,
+                    "minimum": 1,
+                    "description": "时限 (ms)."
+                },
+                "oiHelper.memoryLimit": {
+                    "type": "number",
+                    "default": 256,
+                    "minimum": 1,
+                    "description": "内存限制 (MB)."
+                },
+                "oiHelper.standard": {
+                    "type": "string",
+                    "enum": [
+                        "c++11",
+                        "c++14",
+                        "c++17",
+                        "c++20"
+                    ],
+                    "default": "c++14",
+                    "description": "C++ 标准."
+                },
+                "oiHelper.contestPenaltyMinutes": {
+                    "type": "number",
+                    "default": 20,
+                    "minimum": 0,
+                    "description": "ICPC 罚时分钟数, 作为 contest.json 缺省."
+                },
+                "oiHelper.contestFreezeMinutes": {
+                    "type": "number",
+                    "default": 0,
+                    "minimum": 0,
+                    "description": "ICPC 封榜时长(分钟), 比赛结束前该时长为封榜期, 0 表示不封榜; 作为 contest.json 缺省."
+                }
+                }
+            },
+            {
+                "title": "OI Helper: 原题与站点 Cookie",
+                "properties": {
+                "oiHelper.luoguCookie": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "洛谷 Cookie, 抓取需登录的洛谷题目或直连提交洛谷时使用. 至少需要 `__client_id`, 建议连同 `_uid` 一起复制. 获取方法见命令「OI Helper: Cookie 帮助」."
+                },
+                "oiHelper.codeforcesCookie": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "Codeforces Cookie, 直连提交到 Codeforces 时使用. 至少需要 `JSESSIONID`(通常还有 `39ce7`); 若提交被 Cloudflare 拦截, 可在浏览器通过验证后再补上 `cf_clearance`. 获取方法见命令「OI Helper: Cookie 帮助」."
+                },
+                "oiHelper.atcoderCookie": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "AtCoder Cookie, 直连提交到 AtCoder 时使用. 必须包含 `csrf_token`, 建议连 `REVEL_SESSION` 一起复制. 获取方法见命令「OI Helper: Cookie 帮助」."
+                },
+                "oiHelper.hydroCookie": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "Hydro Cookie, 抓取/直连提交自建 Hydro 站点时使用. 复制登录后的完整 Cookie 即可. 获取方法见命令「OI Helper: Cookie 帮助」."
+                },
+                "oiHelper.hydroBase": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "Hydro 站点地址(如 `https://hydro.ac`), 来源里出现 Hydro 题号时用于拼接原题链接."
+                },
+                "oiHelper.originalPriority": {
+                    "type": "string",
+                    "default": "luogu,codeforces,atcoder,hydro",
+                    "description": "原题来源优先级(逗号分隔), 决定「查看/预览/样例/提交原题」优先使用哪个站点."
+                },
+                "oiHelper.originalSubmitMode": {
+                    "type": "string",
+                    "enum": [
+                        "direct",
+                        "browser"
+                    ],
+                    "default": "direct",
+                    "description": "提交原题方式: direct=直连提交(失败自动改用浏览器), browser=打开提交页并复制源码."
+                }
+                }
+            },
+            {
+                "title": "OI Helper: 测试点与提交确认",
+                "properties": {
+                "oiHelper.caseDuplicateHint": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "测试点完全重复(输入与输出都相同)时在面板给出提示."
+                },
+                "oiHelper.caseConflictWarn": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "测试点输入相同但输出不同时在面板给出警告."
+                },
+                "oiHelper.fastIO": {
+                    "type": "string",
+                    "default": "ios::sync_with_stdio(0);cin.tie(0),cout.tie(0);",
+                    "description": "「加速 IO」按钮写入源文件 main 开头的内容, 可多行; 留空则禁用该按钮."
+                },
+                "oiHelper.submitConfirmAcCount": {
+                    "type": "number",
+                    "default": 1,
+                    "description": "最近一次评测 AC 时, 一键提交前的确认弹窗次数(1-5)."
+                },
+                "oiHelper.submitConfirmAcText": {
+                    "type": "string",
+                    "default": "你要提交了吗?",
+                    "description": "最近一次评测 AC 时, 一键提交确认弹窗的文案."
+                },
+                "oiHelper.submitConfirmNonAcCount": {
+                    "type": "number",
+                    "default": 2,
+                    "description": "最近一次评测未 AC 时, 一键提交前的确认弹窗次数(1-5)."
+                },
+                "oiHelper.submitConfirmNonAcText": {
+                    "type": "string",
+                    "default": "你没有AC哦, 你真的要提交吗?",
+                    "description": "最近一次评测未 AC 时, 一键提交确认弹窗的文案."
+                },
+                "oiHelper.submitConfirmHoldSeconds": {
+                    "type": "number",
+                    "default": 3,
+                    "description": "确认弹窗中「确定」按钮需强制等待的秒数, 0 表示不等待."
+                },
+                "oiHelper.submitResultTimeout": {
+                    "type": "number",
+                    "default": 60,
+                    "description": "提交后自动查询评测结果的超时秒数, 超过即停止轮询."
+                }
+                }
+            },
+            {
+                "title": "OI Helper: 抓取与预览",
+                "properties": {
+                "oiHelper.fetchCacheMinutes": {
+                    "type": "number",
+                    "default": 30,
+                    "description": "题目抓取结果的缓存时长(分钟): 期间重复识别/导入/预览同一题不再重新抓取; 0 表示不缓存."
+                },
+                "oiHelper.fetchPreferWinHttp": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "抓取题目时优先用内置网络库(不启动 curl 进程), 被站点拦截时自动改用 curl; 关闭则始终用 curl."
+                },
+                "oiHelper.previewIncremental": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "题目预览面板增量更新: 切换题目时只替换内容, 不重建整页, 图片不会重新下载; 关闭则每次重建页面."
+                }
+                }
+            }
+        ]
+    },
+    "scripts": {
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "@types/vscode": "^1.80.0",
+        "typescript": "^5.4.0"
+    }
+}

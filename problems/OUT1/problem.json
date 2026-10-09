@@ -1,0 +1,10 @@
+{
+  "name": "OUT1",
+  "type": "output-only",
+  "timeLimit": 1000,
+  "memoryLimit": 256,
+  "checker": "diff",
+  "tests": [
+    { "id": 1, "out": "1.out" }
+  ]
+}

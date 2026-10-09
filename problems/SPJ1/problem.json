@@ -1,0 +1,7 @@
+{
+  "name": "SPJ1",
+  "type": "traditional",
+  "timeLimit": 1000,
+  "memoryLimit": 256,
+  "checker": "testlib"
+}
