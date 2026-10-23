@@ -41,7 +41,9 @@
                 "from": "../extension",
                 "to": "extension",
                 "filter": [
-                    "*.vsix"
+                    "*.vsix",
+                    "!*-pre.vsix",
+                    "!*-0.0.*.vsix"
                 ]
             },
             {
@@ -50,6 +52,24 @@
                 "filter": [
                     "*.ps1"
                 ]
+            },
+            {
+                "from": "../browser",
+                "to": "browser",
+                "filter": [
+                    "**/*"
+                ]
+            },
+            {
+                "from": "../docs",
+                "to": "docs",
+                "filter": [
+                    "*.md"
+                ]
+            },
+            {
+                "from": "../README.md",
+                "to": "README.md"
             }
         ],
         "win": {
