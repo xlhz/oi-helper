@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http: https: ws: wss:">
+    <title>OI Helper</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <header class="topbar">
+            <div class="brand">
+                <div class="logo">OI</div>
+                <div class="brand-text">
+                    <h1>OI Helper</h1>
+                    <span class="caption">桌面管理程序</span>
+                </div>
+            </div>
+            <span class="version" id="version"></span>
+        </header>
+
+        <nav class="tabbar" id="tabbar">
+            <button class="tab" data-tab="servers">服务器</button>
+            <button class="tab" data-tab="oih">识别到的OIH</button>
+            <button class="tab" data-tab="credentials">凭据</button>
+            <button class="tab active" data-tab="interface">接口</button>
+            <button class="tab" data-tab="workspace">工作区</button>
+            <button class="tab" data-tab="settings">设置</button>
+        </nav>
+
+        <main class="content">
+            <section class="panel" data-panel="servers">
+                <div class="card overview" id="server-overview">
+                    <div class="overview-main">
+                        <span class="overview-label">当前默认连接</span>
+                        <div class="overview-name" id="overview-name">未设置</div>
+                        <div class="overview-meta" id="overview-meta">在服务器列表中可将某台设为默认连接.</div>
+                    </div>
+                    <span class="status-chip idle" id="overview-status">未连接</span>
+                </div>
+
+                <div class="subtabs" id="server-subtabs">
+                    <button class="subtab active" data-server-sub="local">本地 <span class="badge" id="count-local">0</span></button>
+                    <button class="subtab" data-server-sub="remote">远程 <span class="badge" id="count-remote">0</span></button>
+                </div>
+
+                <div class="subpanel active" data-server-panel="local">
+                    <div class="section-head">
+                        <div>
+                            <h2>本地服务器</h2>
+                            <p class="hint">状态为记录式启停, 启动时探测该地址的 /health, 不拉起重型服务.</p>
+                        </div>
+                        <div class="head-actions">
+                            <button class="ghost" id="toggle-domain-groups">域名组</button>
+                            <button class="primary" id="add-local-server">新建本地服务器</button>
+                        </div>
+                    </div>
+                    <article class="card" id="domain-group-card" hidden>
+                        <div class="card-head">
+                            <div>
+                                <h2>域名组</h2>
+                                <p class="hint">供公网访问的本地服务器选用, 变更会持久化.</p>
+                            </div>
+                            <button class="ghost" id="add-domain-group">新增域名组</button>
+                        </div>
+                        <div class="domain-group-list" id="domain-group-list"></div>
+                    </article>
+                    <article class="card table-card">
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>地址</th>
+                                        <th>访问方式</th>
+                                        <th>域名组</th>
+                                        <th>状态</th>
+                                        <th>默认</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="local-rows"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-hint" id="local-empty" hidden>暂无本地服务器</div>
+                    </article>
+                </div>
+
+                <div class="subpanel" data-server-panel="remote">
+                    <div class="section-head">
+                        <div>
+                            <h2>远程服务器</h2>
+                            <p class="hint">连接时探测地址的 /health, 连接状态会持久化.</p>
+                        </div>
+                        <div class="head-actions">
+                            <button class="primary" id="add-remote-server">新建远程服务器</button>
+                        </div>
+                    </div>
+                    <article class="card table-card">
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>地址</th>
+                                        <th>验证信息</th>
+                                        <th>我的权限</th>
+                                        <th>连接状态</th>
+                                        <th>默认</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="remote-rows"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-hint" id="remote-empty" hidden>暂无远程服务器</div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel" data-panel="oih">
+                <div class="section-head">
+                    <div>
+                        <h2>识别到的OIH</h2>
+                        <p class="hint">扫描含 <code>.oihelper/workspace.json</code> 的目录, 并对扫描端口与已上报地址请求 <code>/health</code>.</p>
+                    </div>
+                    <div class="head-actions">
+                        <button class="ghost" id="oih-scan">扫描</button>
+                        <button class="ghost" id="oih-new-workspace">新建工作区</button>
+                        <button class="ghost" id="oih-json">JSON 管理</button>
+                        <button class="ghost" id="oih-export">导出 JSON</button>
+                        <button id="oih-compare">一键对照</button>
+                    </div>
+                </div>
+
+                <div class="oih-layout" id="oih-layout">
+                    <article class="card table-card oih-card">
+                        <div class="oih-card-head">
+                            <div>
+                                <h3>工作区 <span class="badge" id="oih-workspace-count">0</span></h3>
+                                <p class="hint" id="oih-workspace-summary">点击行多选; 选中后右表高亮绑定实例.</p>
+                            </div>
+                            <button class="ghost" id="oih-workspace-remove">删除选中</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="cell-check"><input type="checkbox" id="oih-workspace-all"></th>
+                                        <th>工作区名</th>
+                                        <th>路径</th>
+                                        <th>服务器连接</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="oih-workspace-rows"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-hint" id="oih-workspace-empty" hidden>尚未识别到工作区, 点击「扫描」或「新建工作区」.</div>
+                    </article>
+
+                    <article class="card table-card oih-card">
+                        <div class="oih-card-head">
+                            <div>
+                                <h3>服务实例 <span class="badge" id="oih-instance-count">0</span></h3>
+                                <p class="hint">来源: 程序启动 / 扩展上报 / 扫描 / 手动; 离线实例保留.</p>
+                            </div>
+                            <button class="ghost" id="oih-add-instance">手动添加实例</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>来源</th>
+                                        <th>地址</th>
+                                        <th>版本</th>
+                                        <th>状态</th>
+                                        <th>关联工作区</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="oih-instance-rows"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-hint" id="oih-instance-empty" hidden>暂无服务实例, 点击「扫描」探测端口列表.</div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel" data-panel="credentials">
+                <div class="section-head">
+                    <div>
+                        <h2>凭据</h2>
+                        <p class="hint">按 OJ 分组, 每组可多条账号; 密码与 Cookie 使用系统加密存储, 界面仅显示是否已设置.</p>
+                    </div>
+                    <div class="head-actions">
+                        <button class="primary" id="add-credential">新增凭据</button>
+                    </div>
+                </div>
+                <div id="credential-groups"></div>
+                <div class="empty-hint" id="credential-empty" hidden>暂无凭据</div>
+
+                <article class="card sync-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>凭据同步</h2>
+                            <p class="hint">总存档: <code class="path" id="sync-archive-path">—</code></p>
+                        </div>
+                        <button class="ghost" id="sync-refresh">刷新状态</button>
+                    </div>
+                    <div class="sync-toolbar">
+                        <input type="text" id="sync-workspace-input" placeholder="输入工作区目录, 例如 D:\code\proj" spellcheck="false">
+                        <button class="ghost" id="sync-add-workspace">添加工作区</button>
+                        <button class="ghost" id="sync-auto-run">执行自动同步</button>
+                    </div>
+                    <div class="sync-workspaces" id="sync-workspaces"></div>
+                    <div class="sync-diff" id="sync-diff" hidden>
+                        <div class="sync-diff-head">
+                            <div>
+                                <h3 id="sync-diff-title">差异</h3>
+                                <p class="hint" id="sync-diff-summary"></p>
+                            </div>
+                            <div class="head-actions">
+                                <button class="ghost" id="sync-apply-skip">全部不改</button>
+                                <button class="ghost" id="sync-apply-archive">全部写回存档</button>
+                                <button class="ghost" id="sync-apply-workspace">全部写回工作区</button>
+                                <button class="ghost" id="sync-close-diff">收起</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>条目</th>
+                                        <th>差异字段</th>
+                                        <th>总存档</th>
+                                        <th>工作区</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sync-diff-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="panel active" data-panel="interface">
+                <div class="subtabs" id="interface-subtabs">
+                    <button class="subtab active" data-sub="api">API</button>
+                    <button class="subtab" data-sub="cli">CLI</button>
+                    <button class="subtab" data-sub="mcp">MCP</button>
+                </div>
+
+                <div class="subpanel active" data-subpanel="api">
+                    <article class="card">
+                        <div class="card-head">
+                            <div>
+                                <h2>HTTP API</h2>
+                                <p class="hint">供脚本与其他工具调用, 与 CLI、MCP 共用同一份令牌.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="api-enabled">
+                                <span class="track"></span>
+                            </label>
+                        </div>
+                        <div class="field-grid">
+                            <label class="field">
+                                <span class="field-label">监听地址</span>
+                                <input id="api-host" type="text" spellcheck="false">
+                            </label>
+                            <label class="field">
+                                <span class="field-label">端口</span>
+                                <input id="api-port" type="number" min="1" max="65535">
+                            </label>
+                        </div>
+                        <div class="field">
+                            <span class="field-label">访问令牌</span>
+                            <div class="token-row">
+                                <code class="token" id="api-token">—</code>
+                                <button class="ghost" id="copy-token">复制</button>
+                            </div>
+                            <p class="hint" id="api-endpoint">API 未开启</p>
+                        </div>
+                        <div class="danger-block">
+                            <div class="danger-row">
+                                <div>
+                                    <div class="danger-title">允许删除服务器</div>
+                                    <div class="hint">危险操作默认关闭, 未开启时 API 返回 403.</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="danger-delete">
+                                    <span class="track"></span>
+                                </label>
+                            </div>
+                            <div class="danger-row">
+                                <div>
+                                    <div class="danger-title">允许覆盖同步</div>
+                                    <div class="hint">危险操作默认关闭, 未开启时 API 返回 403.</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="danger-sync">
+                                    <span class="track"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="primary" id="save-api">保存配置</button>
+                            <button id="test-api">测试调用 /health</button>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="card-head">
+                            <h2>请求日志</h2>
+                            <button class="ghost" id="clear-log-api">清空</button>
+                        </div>
+                        <div class="log" id="log-api"></div>
+                    </article>
+                </div>
+
+                <div class="subpanel" data-subpanel="cli">
+                    <article class="card">
+                        <div class="card-head">
+                            <div>
+                                <h2>oih 命令行</h2>
+                                <p class="hint">与程序 API 共用令牌, 默认输出 JSON 信封 { ok, identity, data, error }.</p>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <span class="field-label">入口</span>
+                            <div class="token-row">
+                                <code class="token" id="cli-path">—</code>
+                                <button class="ghost" id="copy-cli">复制</button>
+                            </div>
+                        </div>
+                        <div class="commands">
+                            <div class="cmd">
+                                <code>oih server list</code>
+                                <span>读取服务器列表</span>
+                            </div>
+                            <div class="cmd">
+                                <code>oih sync push --workspace &lt;目录&gt; --yes</code>
+                                <span>覆盖同步到工作区, 写操作需显式确认</span>
+                            </div>
+                            <div class="cmd">
+                                <code>oih judge run --problem &lt;目录&gt;</code>
+                                <span>调用现有 oi-judge 评测</span>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="primary" id="test-cli">测试调用 server list</button>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="card-head">
+                            <h2>输出日志</h2>
+                            <button class="ghost" id="clear-log-cli">清空</button>
+                        </div>
+                        <div class="log" id="log-cli"></div>
+                    </article>
+                </div>
+
+                <div class="subpanel" data-subpanel="mcp">
+                    <article class="card">
+                        <div class="card-head">
+                            <div>
+                                <h2>MCP 服务</h2>
+                                <p class="hint">由桌面程序托管 (stdio), 保留 10 个工具名, 无需单独启动 MCP 进程.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="mcp-enabled">
+                                <span class="track"></span>
+                            </label>
+                        </div>
+                        <div class="mcp-state">
+                            <span class="dot" id="mcp-dot"></span>
+                            <span id="mcp-state">未启动</span>
+                            <span class="hint" id="mcp-pid"></span>
+                        </div>
+                        <div class="field">
+                            <span class="field-label">工具清单 (10)</span>
+                            <div class="tools" id="mcp-tools"></div>
+                        </div>
+                        <div class="actions">
+                            <button class="primary" id="test-mcp">测试启动</button>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="card-head">
+                            <h2>启动日志</h2>
+                            <button class="ghost" id="clear-log-mcp">清空</button>
+                        </div>
+                        <div class="log" id="log-mcp"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel" data-panel="workspace">
+                <article class="card lan-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>局域网协作</h2>
+                            <p class="hint">同一服务器同一房间内实时聊天; 局域网服务默认端口 17330, 被占用时自动顺延.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="lan-enabled">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                    <div class="field-grid">
+                        <label class="field">
+                            <span class="field-label">服务器地址</span>
+                            <input type="text" id="lan-server" spellcheck="false" placeholder="留空使用本机; 也可填 192.168.1.10:17330">
+                        </label>
+                        <label class="field">
+                            <span class="field-label">昵称</span>
+                            <input type="text" id="lan-nickname" spellcheck="false" placeholder="留空使用系统用户名">
+                        </label>
+                    </div>
+                    <div class="field-grid">
+                        <label class="field">
+                            <span class="field-label">房间</span>
+                            <input type="text" id="lan-room" spellcheck="false" placeholder="default">
+                        </label>
+                        <label class="field">
+                            <span class="field-label">端口</span>
+                            <input type="number" id="lan-port" min="1" max="65535">
+                        </label>
+                    </div>
+                    <div class="lan-state-row">
+                        <span class="status-chip idle" id="lan-status">未开启</span>
+                        <span class="hint" id="lan-self"></span>
+                    </div>
+                    <div class="lan-layout">
+                        <aside class="lan-members">
+                            <h3>在线成员 <span class="badge" id="lan-member-count">0</span></h3>
+                            <div id="lan-members" class="lan-member-list"></div>
+                        </aside>
+                        <div class="lan-chat">
+                            <div id="lan-messages" class="lan-messages"></div>
+                            <div class="lan-input-row">
+                                <input type="text" id="lan-input" placeholder="输入消息, 回车发送" autocomplete="off">
+                                <button class="primary" id="lan-send">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">消息留存</div>
+                            <div class="hint">开启后写入 %APPDATA%/OIHelper/lan-messages.json; 关闭时只保存在内存.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="lan-retention">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                </article>
+                <div class="empty-state">
+                    <div class="empty-icon">W</div>
+                    <h2>工作区</h2>
+                    <p id="workspace-empty-desc">工作区内容为 v0.1.0 的空态占位, 不触发任何数据请求.</p>
+                    <p class="hint" id="workspace-empty-hint">入口: 在「识别到的OIH」中扫描或新建工作区.</p>
+                </div>
+            </section>
+
+            <section class="panel" data-panel="settings">
+                <div class="section-head">
+                    <div>
+                        <h2>设置</h2>
+                        <p class="hint">修改后立即持久化; 托盘与自动同步默认模式即时生效.</p>
+                    </div>
+                </div>
+                <article class="card">
+                    <div class="card-head">
+                        <h2>存储与同步</h2>
+                    </div>
+                    <label class="field">
+                        <span class="field-label">总存档路径</span>
+                        <input type="text" id="settings-archive-path" spellcheck="false">
+                        <span class="hint">所有工作区共用; 切换路径时, 目标不存在会把当前存档写入, 已存在则以目标内容为准.</span>
+                    </label>
+                    <label class="field">
+                        <span class="field-label">扫描根目录</span>
+                        <textarea id="settings-scan-roots" spellcheck="false" placeholder="每行一个目录"></textarea>
+                        <span class="hint">「识别到的OIH」扫描这些目录下最多 3 层; 留空时回退到用户主目录.</span>
+                    </label>
+                    <label class="field">
+                        <span class="field-label">自动同步默认模式</span>
+                        <select id="settings-auto-sync">
+                            <option value="off">关闭</option>
+                            <option value="workspaceToArchive">工作区 → 存档</option>
+                            <option value="archiveToWorkspace">存档 → 工作区</option>
+                            <option value="both">双向</option>
+                        </select>
+                        <span class="hint">仅对新建工作区生效, 已存在工作区保持原模式.</span>
+                    </label>
+                </article>
+                <article class="card">
+                    <div class="card-head">
+                        <h2>服务与启动</h2>
+                    </div>
+                    <div class="field-grid">
+                        <label class="field">
+                            <span class="field-label">WebSocket 端口</span>
+                            <input type="number" id="settings-ws-port" min="1" max="65535">
+                            <span class="hint">修改后下次启动生效.</span>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">扫描端口列表</span>
+                            <input type="text" id="settings-scan-ports" spellcheck="false">
+                            <span class="hint">逗号分隔, 例如 17321,17322.</span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">开机自启</div>
+                            <div class="hint">开发模式下只保存设置, 不写入系统启动项.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-auto-start">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">托盘</div>
+                            <div class="hint">关闭后关闭窗口将直接退出程序.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-tray">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">显示悬浮窗</div>
+                            <div class="hint">无边框置顶, 展示题目、测试点与评测结果; 位置与尺寸自动记忆.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-float">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                    <div class="actions">
+                        <button class="primary" id="save-settings">保存设置</button>
+                    </div>
+                    <p class="setting-notice" id="settings-notice"></p>
+                </article>
+                <article class="card">
+                    <div class="card-head">
+                        <h2>局域网协作</h2>
+                    </div>
+                    <div class="field-grid">
+                        <label class="field">
+                            <span class="field-label">端口</span>
+                            <input type="number" id="settings-lan-port" min="1" max="65535">
+                            <span class="hint">默认 17330, 被占用时自动顺延.</span>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">房间</span>
+                            <input type="text" id="settings-lan-room" spellcheck="false" placeholder="default">
+                            <span class="hint">留空使用 default; 不同房间的消息互不可见.</span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">开启局域网协作</div>
+                            <div class="hint">保存后立即启动或停止本地局域网服务.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-lan-enabled">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">消息留存</div>
+                            <div class="hint">关闭时不写入 lan-messages.json.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-lan-retention">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                </article>
+                <article class="card">
+                    <div class="card-head">
+                        <h2>比赛通知</h2>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="danger-title">通知总开关</div>
+                            <div class="hint">关闭后任何事件都不再弹出通知, 但仍会记录到事件列表.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-notify-enabled">
+                            <span class="track"></span>
+                        </label>
+                    </div>
+                    <div class="check-grid">
+                        <label class="check"><input type="checkbox" id="settings-notify-teammate-submit"><span>队友提交</span></label>
+                        <label class="check"><input type="checkbox" id="settings-notify-first-blood"><span>一血</span></label>
+                        <label class="check"><input type="checkbox" id="settings-notify-freeze"><span>封榜</span></label>
+                        <label class="check"><input type="checkbox" id="settings-notify-unfreeze"><span>解榜</span></label>
+                    </div>
+                    <p class="hint">未勾选的类型不会提醒, 但仍可在下方事件区查看.</p>
+                    <label class="field">
+                        <span class="field-label">订阅规则</span>
+                        <textarea id="settings-notify-rules" spellcheck="false" placeholder='[{"type":"first_blood","oj":"","contestId":"","enabled":true}]'></textarea>
+                        <span class="hint">JSON 数组, 每项为 { type, oj, contestId, enabled }; type 可用 teammate_submit / first_blood / freeze / unfreeze / *. 留空表示不启用规则; 配置后仅命中规则的提醒.</span>
+                    </label>
+                </article>
+                <article class="card">
+                    <div class="card-head">
+                        <div>
+                            <h2>事件</h2>
+                            <p class="hint">最近 200 条比赛事件, 统一结构为 { id, type, time, payload, source }, 保存在 %APPDATA%/OIHelper/events.json.</p>
+                        </div>
+                        <button class="ghost" id="clear-events">清空</button>
+                    </div>
+                    <div id="event-list" class="event-list"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <div class="modal" id="modal" hidden>
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2 id="modal-title">编辑</h2>
+                <button class="modal-close" id="modal-close">×</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-foot">
+                <span class="form-error" id="modal-error"></span>
+                <div class="head-actions">
+                    <button class="ghost" id="modal-cancel">取消</button>
+                    <button class="primary" id="modal-submit">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>

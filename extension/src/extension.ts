@@ -8,13 +8,55 @@ import { ProblemView } from './problemView';
 import { ResultsView } from './resultsView';
 import { ContestView } from './contestView';
 import { CookieHelp } from './cookieHelp';
+import { OihClient, OihEvent } from './oihClient';
+import { runEnvCheckCommand } from './envCheck';
+import { applyEditorConfigCommand } from './workspaceConfig';
+import { fixDivisionCommand, fixFreopenCommand, fixYesCaseCommand } from './fix';
+
+let oihClient: OihClient | undefined;
+
+function oihEnabled(): boolean {
+    return vscode.workspace.getConfiguration('oiHelper').get<boolean>('oihEnabled', true);
+}
+
+function oihNotifyEnabled(): boolean {
+    return vscode.workspace.getConfiguration('oiHelper').get<boolean>('oihNotify', true);
+}
+
+function workspacePaths(): string[] {
+    return (vscode.workspace.workspaceFolders || []).map((folder) => folder.uri.fsPath);
+}
+
+function activeWorkspacePath(): string {
+    const folders = vscode.workspace.workspaceFolders || [];
+    return folders.length > 0 ? folders[0].uri.fsPath : '';
+}
+
+// 创建 .oihelper/workspace.json 与 problems/, 已存在时返回可读提示
+function ensureWorkspaceStructure(targetPath: string): { ok: boolean; message: string } {
+    const target = path.resolve(targetPath);
+    const metaFile = path.join(target, '.oihelper', 'workspace.json');
+    if (fs.existsSync(metaFile)) {
+        return { ok: false, message: `该目录已是工作区: ${target}` };
+    }
+    fs.mkdirSync(path.join(target, '.oihelper'), { recursive: true });
+    fs.mkdirSync(path.join(target, 'problems'), { recursive: true });
+    const now = new Date().toISOString();
+    fs.writeFileSync(metaFile, JSON.stringify({
+        version: 1,
+        name: path.basename(target),
+        createdAt: now,
+        updatedAt: now
+    }, null, 4));
+    return { ok: true, message: `已创建工作区: ${target}` };
+}
 
 export function activate(context: vscode.ExtensionContext): void {
     const output = vscode.window.createOutputChannel('OI Helper');
     const results = new ResultsView(context.extensionUri);
     const preview = new ProblemView(context.extensionUri, output, resolveJudgePath, promptJudgePath);
     const panel = new PanelController(context.extensionUri, output, preview);
-    const contest = new ContestView(context.extensionUri, output, resolveJudgePath);
+    const contest = new ContestView(context.extensionUri, output);
     panel.setResultSink((result) => results.showResult(result));
     panel.setSubmitSink((state) => results.showSubmit(state));
     panel.setStateSink((running) => results.setRunning(running));
@@ -35,7 +77,51 @@ export function activate(context: vscode.ExtensionContext): void {
         if (e.affectsConfiguration('oiHelper.caseDuplicateHint') || e.affectsConfiguration('oiHelper.caseConflictWarn')) {
             panel.refreshConfig();
         }
+        if (e.affectsConfiguration('oiHelper.oihEnabled')) {
+            if (oihEnabled()) {
+                oihClient?.start();
+            } else {
+                oihClient?.stop();
+            }
+        } else if (e.affectsConfiguration('oiHelper')) {
+            oihClient?.refreshStatus();
+        }
     }));
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        oihClient?.notifyWorkspaceChanged();
+    }));
+
+    oihClient = new OihClient({
+        extensionVersion: String((context.extension.packageJSON as { version?: string }).version || '0.0.0'),
+        getWorkspacePath: activeWorkspacePath,
+        getWorkspacePaths: workspacePaths,
+        onOpenWorkspace: async (target: string) => {
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(target), { forceNewWindow: false });
+        },
+        onCreateWorkspace: async (target: string) => ensureWorkspaceStructure(target),
+        onEvent: (event: OihEvent) => {
+            if (!oihNotifyEnabled()) {
+                output.appendLine(`[OIH] 通知已关闭, 跳过编辑器提示: ${String(event.payload?.title || event.type || '')}`);
+                return;
+            }
+            const payload = event.payload || {};
+            const text = [payload.title || payload.text || event.type || '比赛事件', payload.contest, payload.problem, payload.user]
+                .filter(Boolean)
+                .join(' · ');
+            void vscode.window.showInformationMessage(text);
+        },
+        onLog: (message) => output.appendLine(`[OIH] ${message}`)
+    });
+    contest.setEventSink((event) => oihClient?.publishEvent(event));
+    context.subscriptions.push({
+        dispose: () => {
+            oihClient?.dispose();
+            oihClient = undefined;
+        }
+    });
+    if (oihEnabled()) {
+        oihClient.start();
+    }
 
     const configTarget = (): vscode.ConfigurationTarget => {
         return vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
@@ -304,6 +390,15 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     };
 
+    const guarded = (run: () => Promise<void>) => async (): Promise<void> => {
+        try {
+            await run();
+        } catch (err) {
+            output.appendLine(`[错误] ${String(err)}`);
+            vscode.window.showErrorMessage(String(err));
+        }
+    };
+
     context.subscriptions.push(
         vscode.commands.registerCommand('oiHelper.openPanel', () => panel.open()),
         vscode.commands.registerCommand('oiHelper.previewProblem', previewProblem),
@@ -317,10 +412,16 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('oiHelper.setJobs', setJobs),
         vscode.commands.registerCommand('oiHelper.refresh', () => results.refresh()),
         vscode.commands.registerCommand('oiHelper.openContest', () => contest.open()),
-        vscode.commands.registerCommand('oiHelper.loadContest', async () => contest.loadContest())
+        vscode.commands.registerCommand('oiHelper.loadContest', () => contest.open()),
+        vscode.commands.registerCommand('oiHelper.envCheck', guarded(() => runEnvCheckCommand(output))),
+        vscode.commands.registerCommand('oiHelper.applyEditorConfig', guarded(() => applyEditorConfigCommand(output))),
+        vscode.commands.registerCommand('oiHelper.fixYesCase', guarded(() => fixYesCaseCommand(output))),
+        vscode.commands.registerCommand('oiHelper.fixFreopen', guarded(() => fixFreopenCommand(output))),
+        vscode.commands.registerCommand('oiHelper.fixDivisionByZero', guarded(() => fixDivisionCommand(output)))
     );
 }
 
 export function deactivate(): void {
-    // no-op
+    oihClient?.dispose();
+    oihClient = undefined;
 }

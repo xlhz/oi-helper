@@ -1,0 +1,78 @@
+{
+    "id": "codeforces",
+    "name": "Codeforces",
+    "version": "1.0.0",
+    "domains": [
+        "codeforces.com"
+    ],
+    "features": {
+        "problem": {
+            "urlPatterns": [
+                "/problemset/problem/",
+                "/contest/\\d+/problem/"
+            ],
+            "selectors": [
+                ".problem-statement",
+                ".ttypography"
+            ]
+        },
+        "login": {
+            "urlPatterns": [
+                "/enter"
+            ],
+            "selectors": [
+                "input[name=\"handle\"]",
+                "input[name=\"password\"]",
+                "form[action*=\"enter\"]"
+            ]
+        }
+    },
+    "selectors": {
+        "pid": [
+            ".problem-statement .title",
+            ".problem-statement .header .title"
+        ],
+        "title": [
+            ".problem-statement .title",
+            ".problem-statement .header .title",
+            "h1"
+        ],
+        "statement": [
+            ".problem-statement",
+            ".ttypography"
+        ],
+        "timeLimit": [
+            ".problem-statement .time-limit",
+            ".time-limit"
+        ],
+        "memoryLimit": [
+            ".problem-statement .memory-limit",
+            ".memory-limit"
+        ],
+        "sampleInput": [
+            ".sample-test .input pre",
+            ".sample-test .input"
+        ],
+        "sampleOutput": [
+            ".sample-test .output pre",
+            ".sample-test .output"
+        ],
+        "loginUser": [
+            "input[name=\"handle\"]"
+        ],
+        "loginPass": [
+            "input[name=\"password\"]",
+            "input[type=\"password\"]"
+        ],
+        "captchaImage": [
+            "img[src*=\"captcha\"]",
+            "img[src*=\"verify\"]"
+        ]
+    },
+    "pidPattern": "/(?:problemset/problem|contest)/(\\d+)/(?:problem/)?([A-Za-z0-9]+)",
+    "pidTemplate": "$1$2",
+    "submitUrl": {
+        "pattern": "/(?:problemset/problem|contest)/(\\d+)/(?:problem/)?([A-Za-z0-9]+)",
+        "template": "https://codeforces.com/problemset/submit/$1/$2"
+    }
+}

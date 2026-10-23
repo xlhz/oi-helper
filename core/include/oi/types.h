@@ -76,6 +76,10 @@ struct TestResult {
     int score = 0;
     int maxScore = 0;
     std::string message;
+    std::string stderrText;  // RE 时程序标准错误(截断)
+    std::string actual;      // WA 时选手实际输出(截断)
+    std::string expected;    // WA 时标准答案(截断)
+    int diffLine = 0;        // 首个不同行号, 0 表示未知
 };
 
 // 子任务结果

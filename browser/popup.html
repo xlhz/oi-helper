@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OI Helper</title>
+    <link rel="stylesheet" href="ui.css">
+    <style>
+        body {
+            width: 400px;
+        }
+
+        .page {
+            padding: 4px 14px 16px;
+        }
+
+        .topbar {
+            padding: 14px 14px 6px;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>OI Helper</h1>
+            <p>采集层 · 登录态抓取</p>
+        </div>
+        <button id="optionsBtn" class="btn small">设置</button>
+    </header>
+    <main class="page">
+        <section class="card">
+            <div class="card-title">
+                <span>当前站点</span>
+                <span id="ruleBadge" class="badge off">未识别</span>
+            </div>
+            <div id="siteInfo" class="kv">
+                <div class="empty">正在识别...</div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>一键获取 Cookie</span>
+                <span class="hint">含 HttpOnly</span>
+            </div>
+            <div class="row">
+                <button id="cookieBtn" class="btn primary">读取当前站点 Cookie</button>
+                <button id="copyCookieBtn" class="btn" disabled>复制明文</button>
+            </div>
+            <div id="cookieMeta" class="hint"></div>
+            <div id="cookieBox" class="code hidden"></div>
+            <div class="hint">明文只保留在当前弹窗内, 关闭即丢弃, 不写入日志.</div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>采集当前页面</span>
+                <span class="hint">整页 outerHTML</span>
+            </div>
+            <div class="row">
+                <button id="fetchBtn" class="btn primary">后台抓取</button>
+                <button id="collectBtn" class="btn">整页解析</button>
+            </div>
+            <div class="hint">后台抓取自动携带站点 Cookie; 整页解析由内容脚本上交 outerHTML, 两者共用同一解析层.</div>
+            <div id="resultBox"></div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>手动分析</span>
+                <span class="hint">站点改版兜底</span>
+            </div>
+            <div class="row">
+                <select id="manualPurpose">
+                    <option value="title">标题</option>
+                    <option value="pid">题号</option>
+                    <option value="statement">题面</option>
+                    <option value="timeLimit">时间限制</option>
+                    <option value="memoryLimit">内存限制</option>
+                    <option value="sampleInput">样例输入</option>
+                    <option value="sampleOutput">样例输出</option>
+                    <option value="loginUser">登录账号</option>
+                    <option value="loginPass">登录密码</option>
+                </select>
+                <button id="manualBtn" class="btn">进入点选</button>
+            </div>
+            <div class="hint">点选后按站点 + 用途保存, 关闭浏览器重开后仍生效.</div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>安全与高风险开关</span>
+                <span class="hint">默认关闭</span>
+            </div>
+            <div id="securityInfo" class="kv"></div>
+            <div class="row">
+                <button id="captchaBtn" class="btn">识别验证码</button>
+                <button id="disableProxyBtn" class="btn small hidden">停用代理</button>
+            </div>
+        </section>
+
+        <div id="msg" class="msg hidden"></div>
+    </main>
+    <script src="lib/config.js"></script>
+    <script src="lib/proxy.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

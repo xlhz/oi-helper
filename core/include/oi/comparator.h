@@ -6,6 +6,7 @@ namespace oi {
 struct CompareResult {
     bool equal = false;
     std::string message;
+    int line = 0;  // 首个不同行号(1 起), 0 表示无
 };
 
 // CCF 规则逐行比对: 忽略行末空格/制表符、文末空行、CR

@@ -1,12 +1,14 @@
 #include "oi/cli.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <thread>
 #include <vector>
 
 #include "oi/compiler.h"
@@ -54,6 +56,8 @@ void printHelp() {
         "  --fetch-extra <url> 下载竞赛「更多样例」压缩包并解压, 回传 JSON\n"
         "  --fetch-extra-out <dir> 「更多样例」解压目录\n"
         "  --fetch-original <url> 抓取原题(洛谷/CF/AtCoder/Hydro)题面与样例, 回传 JSON\n"
+        "  --difficulty <pid> 查询洛谷题目难度(P1001/CF1760G), 建议配合 --fetch-cookie\n"
+        "  --search-luogu <kw> 按关键词检索洛谷题目, 回传 JSON(pid/name 列表)\n"
         "  --submit <url>    提交源码到 xmoj(题目页 URL), 需 --fetch-user/--fetch-pass\n"
         "  --submit-original <url> 直连提交源码到原题(洛谷/CF/AtCoder/Hydro), 需 --fetch-cookie\n"
         "  --submit-result <sid> 查询某个提交的评测结果\n"
@@ -105,6 +109,210 @@ std::string findDefaultSource(const std::string& dir, const std::string& name) {
     std::sort(found.begin(), found.end());
     return found.empty() ? "" : found.front();
 }
+
+// ---- 提交防护: 跨进程串行化 + 强制最小间隔 + 同源码去重 ----
+
+long long nowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+        .count();
+}
+
+long long envInt(const char* name, long long def) {
+    const char* v = std::getenv(name);
+    if (!v || !*v) return def;
+    try {
+        return std::stoll(v);
+    } catch (...) {
+        return def;
+    }
+}
+
+std::string hex16(unsigned long long v) {
+    char buf[17];
+    std::snprintf(buf, sizeof(buf), "%016llx", v);
+    return std::string(buf);
+}
+
+// FNV-1a 64 位
+unsigned long long fnv1a(const std::string& data) {
+    unsigned long long h = 14695981039346656037ULL;
+    for (unsigned char c : data) {
+        h ^= static_cast<unsigned long long>(c);
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+// Windows 路径含反斜杠, 写日志必须转义
+std::string jsonEscape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '\\': out += "\\\\"; break;
+            case '"': out += "\\\""; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out += c;
+        }
+    }
+    return out;
+}
+
+bool readFirstLine(const std::string& path, long long& out) {
+    std::ifstream ifs(path, std::ios::binary);
+    if (!ifs) return false;
+    std::string line;
+    if (!std::getline(ifs, line)) return false;
+    try {
+        out = std::stoll(line);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+std::string readBinary(const std::string& path, bool& ok) {
+    std::ifstream ifs(path, std::ios::binary);
+    if (!ifs) {
+        ok = false;
+        return "";
+    }
+    std::ostringstream ss;
+    ss << ifs.rdbuf();
+    ok = true;
+    return ss.str();
+}
+
+// <state> = (TEMP 或 TMPDIR 或 .) / oi-helper-mcp
+std::string stateDirPath() {
+    const char* base = std::getenv("TEMP");
+    if (!base || !*base) base = std::getenv("TMPDIR");
+    if (!base || !*base) base = ".";
+    return (fs::path(base) / "oi-helper-mcp").string();
+}
+
+constexpr long long kLockWaitMs = 60000;    // 拿锁最长等待, 超时降级为不加锁
+constexpr long long kLockStaleMs = 120000;  // 超过此值的锁视为残留
+
+class SubmitGuard {
+public:
+    ~SubmitGuard() { release(); }
+
+    // 返回 false 表示已被去重拦截(已打印 JSON), 调用方应直接 return 0
+    bool begin(const std::string& tool, const std::string& url, const std::string& lang,
+               const std::string& file) {
+        tool_ = tool;
+        file_ = file;
+        stateDir_ = stateDirPath();
+        std::error_code ec;
+        fs::create_directories(stateDir_, ec);  // 失败也继续(降级)
+        lockDir_ = (fs::path(stateDir_) / "submit-cli.lock").string();
+        locked_ = acquireLock();
+
+        bool contentOk = false;
+        std::string content = readBinary(file, contentOk);
+        if (contentOk) {
+            key_ = hex16(fnv1a(tool + "|" + url + "|" + lang + "|" + hex16(fnv1a(content))));
+        } else {
+            key_.clear();  // 读不到源码, 跳过去重但仍走锁与间隔
+        }
+
+        long long dedupSec = envInt("OI_SUBMIT_DEDUP_SECONDS", 60);
+        long long intervalMs = envInt("OI_SUBMIT_INTERVAL_MS", 1000);
+
+        if (dedupSec > 0 && !key_.empty()) {
+            long long t = 0;
+            if (readFirstLine(recordPath(), t) && (nowMs() - t) <= dedupSec * 1000) {
+                std::string msg = "[重复提交已拦截] 同一份源码在 " + std::to_string(dedupSec) +
+                                  " 秒内已提交过. 请勿重复提交; 如需重提请稍后重试, 或设置 "
+                                  "OI_SUBMIT_DEDUP_SECONDS=0 关闭去重.";
+                std::cout << "{\"ok\":false,\"blocked\":true,\"message\":\"" << msg << "\"}\n";
+                audit("block");
+                release();
+                return false;
+            }
+        }
+
+        if (intervalMs > 0) {
+            long long last = 0;
+            if (readFirstLine(lastStartPath(), last)) {
+                long long gap = nowMs() - last;
+                if (gap < intervalMs) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(intervalMs - gap));
+                }
+            }
+        }
+        writeStamp(lastStartPath(), nowMs());
+        audit("attempt");
+        return true;
+    }
+
+    void end(bool ok, const std::string& solutionId) {
+        if (ok && !key_.empty()) {
+            std::ofstream ofs(recordPath(), std::ios::binary | std::ios::trunc);
+            if (ofs) ofs << nowMs() << "\n" << solutionId << "\n";
+            audit("submit");
+        }
+        release();
+    }
+
+private:
+    bool acquireLock() {
+        long long start = nowMs();
+        for (;;) {
+            std::error_code ec;
+            if (fs::create_directory(lockDir_, ec)) {
+                writeStamp((fs::path(lockDir_) / "t").string(), nowMs());
+                return true;
+            }
+            long long t = 0;
+            if (readFirstLine((fs::path(lockDir_) / "t").string(), t) && (nowMs() - t) > kLockStaleMs) {
+                fs::remove_all(lockDir_, ec);  // 残留锁, 清掉重试
+                continue;
+            }
+            if (nowMs() - start > kLockWaitMs) return false;  // 超时降级
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    }
+
+    void release() {
+        if (!locked_) return;
+        locked_ = false;
+        std::error_code ec;
+        fs::remove_all(lockDir_, ec);
+    }
+
+    std::string recordPath() const {
+        return (fs::path(stateDir_) / ("clirec-" + key_ + ".txt")).string();
+    }
+    std::string lastStartPath() const {
+        return (fs::path(stateDir_) / "submit-cli-last-start").string();
+    }
+
+    void writeStamp(const std::string& path, long long t) {
+        std::ofstream ofs(path, std::ios::binary | std::ios::trunc);
+        if (ofs) ofs << t << "\n";
+    }
+
+    void audit(const std::string& action) {
+        std::ofstream ofs((fs::path(stateDir_) / "submit.log").string(),
+                          std::ios::binary | std::ios::app);
+        if (!ofs) return;
+        ofs << "{\"t\":" << nowMs() << ",\"src\":\"cli\",\"tool\":\"" << jsonEscape(tool_)
+            << "\",\"action\":\"" << jsonEscape(action) << "\",\"key\":\"" << jsonEscape(key_)
+            << "\",\"file\":\"" << jsonEscape(file_) << "\"}\n";
+    }
+
+    std::string tool_;
+    std::string file_;
+    std::string key_;
+    std::string stateDir_;
+    std::string lockDir_;
+    bool locked_ = false;
+};
 
 }  // namespace
 
@@ -185,6 +393,10 @@ int runCli(int argc, char** argv) {
             opt.fetchWinHttp = true;
         } else if (a == "--fetch-original" && valueOf(v)) {
             opt.fetchOriginal = v;
+        } else if (a == "--difficulty" && valueOf(v)) {
+            opt.difficulty = v;
+        } else if (a == "--search-luogu" && valueOf(v)) {
+            opt.searchLuogu = v;
         } else if (a == "--submit-original" && valueOf(v)) {
             opt.submitOriginal = v;
         } else if (a == "--submit-result" && valueOf(v)) {
@@ -241,6 +453,43 @@ int runCli(int argc, char** argv) {
         return 0;
     }
 
+    // 查询洛谷题目难度
+    if (!opt.difficulty.empty()) {
+        DifficultyResult dr = fetchLuoguDifficulty(opt.difficulty, opt.fetchCookie);
+        if (!dr.ok) {
+            std::cerr << (dr.error.empty() ? "查询难度失败" : dr.error) << "\n";
+            return 1;
+        }
+        Json root = Json::makeObject();
+        root["ok"] = Json::makeBool(true);
+        root["pid"] = Json::makeString(dr.pid);
+        root["difficulty"] = Json::makeInt(dr.difficulty);
+        root["text"] = Json::makeString(dr.text);
+        std::cout << root.dump(opt.pretty) << "\n";
+        return 0;
+    }
+
+    // 按关键词检索洛谷题目
+    if (!opt.searchLuogu.empty()) {
+        LuoguSearchResult sr = searchLuogu(opt.searchLuogu, opt.fetchCookie);
+        if (!sr.ok) {
+            std::cerr << (sr.error.empty() ? "检索洛谷失败" : sr.error) << "\n";
+            return 1;
+        }
+        Json root = Json::makeObject();
+        root["ok"] = Json::makeBool(true);
+        Json items = Json::makeArray();
+        for (const LuoguSearchItem& it : sr.items) {
+            Json o = Json::makeObject();
+            o["pid"] = Json::makeString(it.pid);
+            o["name"] = Json::makeString(it.name);
+            items.arrVal.push_back(o);
+        }
+        root["items"] = items;
+        std::cout << root.dump(opt.pretty) << "\n";
+        return 0;
+    }
+
     // 原题直连提交(洛谷/CF/AtCoder)
     if (!opt.submitOriginal.empty()) {
         OriginalSubmitOptions oo;
@@ -249,9 +498,12 @@ int runCli(int argc, char** argv) {
         oo.lang = opt.submitLang;
         oo.cookie = opt.fetchCookie;
         oo.captcha = opt.submitCaptcha;
+        SubmitGuard guard;
+        if (!guard.begin("submit-original", oo.url, oo.lang, oo.file)) return 0;
         OriginalSubmitResult osr = submitOriginal(oo);
-        // 需要图形验证码: 回传图片与本次会话 Cookie, 由前端弹窗输入后重试
+        // 需要图形验证码: 不记录去重, 回传图片与本次会话 Cookie, 由前端弹窗输入后重试
         if (osr.needCaptcha) {
+            guard.end(false, "");
             Json cap = Json::makeObject();
             cap["ok"] = Json::makeBool(false);
             cap["oj"] = Json::makeString(osr.oj);
@@ -262,6 +514,7 @@ int runCli(int argc, char** argv) {
             std::cout << cap.dump(opt.pretty) << "\n";
             return 0;
         }
+        guard.end(osr.ok, osr.submissionId);
         if (!osr.ok) {
             std::cerr << (osr.message.empty() ? "提交失败" : osr.message) << "\n";
             return 1;
@@ -312,7 +565,10 @@ int runCli(int argc, char** argv) {
         so.lang = opt.submitLang;
         so.user = opt.fetchUser;
         so.password = opt.fetchPass;
+        SubmitGuard guard;
+        if (!guard.begin("submit", so.url, so.lang, so.file)) return 0;
         SubmitResult sr = submitSolution(so);
+        guard.end(sr.ok, sr.ok ? std::to_string(sr.solutionId) : std::string());
         if (!sr.ok) {
             std::cerr << (sr.message.empty() ? "提交失败" : sr.message) << "\n";
             return 1;
@@ -361,6 +617,7 @@ int runCli(int argc, char** argv) {
         root["leftSeconds"] = Json::makeInt(p.leftSeconds);
         root["classId"] = Json::makeString(p.classId);
         root["sessionEnd"] = Json::makeString(p.sessionEnd);
+        root["correctionEnd"] = Json::makeString(p.correctionEnd);
         root["fileIO"] = Json::makeBool(p.fileIO);
         root["freopenIn"] = Json::makeString(p.freopenIn);
         root["freopenOut"] = Json::makeString(p.freopenOut);

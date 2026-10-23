@@ -1,0 +1,83 @@
+{
+    "manifest_version": 3,
+    "name": "OI Helper 浏览器扩展",
+    "version": "0.1.0",
+    "description": "在浏览器已有登录态下采集 OJ 题目, 支持规则识别、一键 Cookie 与手动分析.",
+    "permissions": [
+        "cookies",
+        "storage",
+        "activeTab"
+    ],
+    "optional_permissions": [
+        "proxy",
+        "webRequest",
+        "webRequestAuthProvider"
+    ],
+    "host_permissions": [
+        "https://*.luogu.com.cn/*",
+        "https://luogu.com.cn/*",
+        "https://*.luogu.org/*",
+        "https://*.xmoj.tech/*",
+        "https://xmoj.tech/*",
+        "https://codeforces.com/*",
+        "https://atcoder.jp/*",
+        "https://*.hydro.ac/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_title": "OI Helper",
+        "default_popup": "popup.html"
+    },
+    "options_page": "options.html",
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "content/panel.css"
+            ],
+            "matches": [
+                "https://*.luogu.com.cn/*",
+                "https://luogu.com.cn/*",
+                "https://*.luogu.org/*",
+                "https://*.xmoj.tech/*",
+                "https://xmoj.tech/*",
+                "https://codeforces.com/*",
+                "https://atcoder.jp/*",
+                "https://*.hydro.ac/*"
+            ]
+        }
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*.luogu.com.cn/*",
+                "https://luogu.com.cn/*",
+                "https://*.luogu.org/*",
+                "https://*.xmoj.tech/*",
+                "https://xmoj.tech/*",
+                "https://codeforces.com/*",
+                "https://atcoder.jp/*",
+                "https://*.hydro.ac/*"
+            ],
+            "js": [
+                "lib/captcha.js",
+                "lib/rules.js",
+                "lib/selectors.js",
+                "lib/ide/base.js",
+                "lib/ide/hydro.js",
+                "lib/ide/generic.js",
+                "lib/ide/index.js",
+                "content/collector.js",
+                "content/ide-panel.js"
+            ],
+            "css": [
+                "content/panel.css"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
+        }
+    ]
+}

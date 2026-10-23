@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-__NONCE__';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-__NONCE__'; connect-src ws: wss:;">
 <style>
     * { box-sizing: border-box; }
     body {
@@ -12,17 +12,39 @@
         font-size: 13px;
         color: var(--vscode-foreground);
     }
-    .empty {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        margin: 56px 0;
-        text-align: center;
-        color: var(--vscode-descriptionForeground);
+    .row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .grow { flex: 1 1 auto; min-width: 0; }
+    input {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-family: inherit;
+        font-size: 12px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+        border-radius: 3px;
+        padding: 4px 6px;
     }
-    .head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-    .contest-name {
+    button {
+        font-family: inherit;
+        font-size: 12px;
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+        border: 1px solid transparent;
+        border-radius: 3px;
+        padding: 4px 10px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    button:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+    button:disabled { opacity: .5; cursor: default; }
+    button.secondary {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+    }
+    button.secondary:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
+    .head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .title {
         flex: 1 1 auto;
         min-width: 0;
         overflow: hidden;
@@ -36,42 +58,24 @@
         border-radius: 999px;
         font-size: 11px;
         font-weight: 600;
+        white-space: nowrap;
     }
     .badge.idle { color: var(--vscode-descriptionForeground); border-color: var(--vscode-descriptionForeground); }
     .badge.running { color: var(--vscode-testing-iconPassed); border-color: var(--vscode-testing-iconPassed); }
-    .badge.paused { color: var(--vscode-list-warningForeground); border-color: var(--vscode-list-warningForeground); }
-    .badge.ended { color: var(--vscode-testing-iconFailed); border-color: var(--vscode-testing-iconFailed); }
-    .timer { display: flex; gap: 20px; margin: 12px 0; }
+    .badge.ended { color: var(--vscode-descriptionForeground); border-color: var(--vscode-descriptionForeground); }
+    .badge.frozen { color: var(--vscode-list-warningForeground); border-color: var(--vscode-list-warningForeground); }
+    .timer { display: flex; gap: 20px; margin: 10px 0; }
     .timer .item { display: flex; flex-direction: column; gap: 2px; }
     .timer .item span { font-size: 11px; color: var(--vscode-descriptionForeground); }
     .timer .item b { font-size: 18px; font-variant-numeric: tabular-nums; }
     .timer .item b.over { color: var(--vscode-list-warningForeground); }
-    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .running-note { margin-left: 6px; font-size: 11px; color: var(--vscode-descriptionForeground); }
-    button {
-        font-family: inherit;
-        font-size: 12px;
-        color: var(--vscode-button-foreground);
-        background: var(--vscode-button-background);
-        border: 1px solid transparent;
-        border-radius: 3px;
-        padding: 4px 10px;
-        cursor: pointer;
-    }
-    button:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
-    button:disabled { opacity: .5; cursor: default; }
-    button.secondary {
-        color: var(--vscode-button-secondaryForeground);
-        background: var(--vscode-button-secondaryBackground);
-    }
-    button.secondary:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
     section {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        padding-top: 12px;
+        padding-top: 10px;
         border-top: 1px solid var(--vscode-panel-border);
-        margin-top: 12px;
+        margin-top: 10px;
     }
     .section-head { display: flex; align-items: center; gap: 8px; }
     .section-head h4 { flex: 1 1 auto; }
@@ -85,28 +89,40 @@
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--vscode-panel-border); }
     th { color: var(--vscode-descriptionForeground); font-weight: 600; }
-    tr.self {
-        color: var(--vscode-list-activeSelectionForeground);
-        background: var(--vscode-list-activeSelectionBackground);
-    }
     .mono { font-family: var(--vscode-editor-font-family); }
     .tnum { font-variant-numeric: tabular-nums; }
     .muted { color: var(--vscode-descriptionForeground); }
-    .freeze-note { font-size: 11px; color: var(--vscode-list-warningForeground); }
-    .st-ok { color: var(--vscode-testing-iconPassed); }
-    .st-try { color: var(--vscode-list-warningForeground); }
-    .st-none { color: var(--vscode-descriptionForeground); }
-    .opponent-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    input {
-        font-family: inherit;
-        font-size: 12px;
-        color: var(--vscode-input-foreground);
-        background: var(--vscode-input-background);
-        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
-        border-radius: 3px;
-        padding: 4px 6px;
+    .ok { color: var(--vscode-testing-iconPassed); }
+    .warn { color: var(--vscode-list-warningForeground); }
+    .list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 220px;
+        overflow-y: auto;
     }
-    input[type="number"] { width: 90px; }
+    .item {
+        padding: 4px 6px;
+        border: 1px solid var(--vscode-panel-border);
+        border-radius: 3px;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+    .item .meta { font-size: 11px; color: var(--vscode-descriptionForeground); }
+    .item.blood { border-color: var(--vscode-list-warningForeground); }
+    .chat-input { display: flex; gap: 6px; }
+    pre {
+        margin: 0;
+        padding: 6px;
+        max-height: 260px;
+        overflow: auto;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 12px;
+        background: var(--vscode-textCodeBlock-background);
+        border: 1px solid var(--vscode-panel-border);
+        border-radius: 3px;
+        white-space: pre;
+    }
     .toast {
         position: fixed;
         left: 12px;
@@ -116,72 +132,113 @@
         border: 1px solid var(--vscode-panel-border);
         border-radius: 4px;
         font-size: 12px;
-        color: var(--vscode-foreground);
         background: var(--vscode-editorWidget-background);
     }
     .toast.info { border-color: var(--vscode-testing-iconPassed); }
     .toast.warn { border-color: var(--vscode-list-warningForeground); }
+    .hidden { display: none; }
 </style>
 </head>
 <body>
-    <div class="empty" id="empty">
-        <span>未载入比赛</span>
-        <button id="load-empty">载入比赛目录</button>
+    <div class="row">
+        <input id="contest-url" type="text" placeholder="洛谷比赛链接, 如 https://www.luogu.com.cn/contest/123456" />
+        <button id="btn-sync">同步</button>
+        <button class="secondary" id="btn-stop">停止</button>
     </div>
-    <div id="main" style="display: none;">
-        <div class="head">
-            <strong class="contest-name" id="contest-name">-</strong>
-            <span class="badge idle" id="badge">未开始</span>
-            <button class="secondary" id="load-main">重新载入</button>
-        </div>
-        <div class="timer">
-            <div class="item"><span>已用</span><b id="elapsed">00:00:00</b></div>
-            <div class="item"><span>剩余</span><b id="remaining">00:00:00</b></div>
-        </div>
-        <div class="controls">
-            <button id="btn-start">开始</button>
-            <button class="secondary" id="btn-pause">暂停</button>
-            <button class="secondary" id="btn-end">结束</button>
-            <button class="secondary" id="btn-reset">重置</button>
-            <span class="running-note" id="running-note"></span>
-        </div>
-        <section>
+    <div class="head" style="margin-top: 10px;">
+        <span class="title" id="contest-name">未同步比赛</span>
+        <span class="badge idle" id="badge">未同步</span>
+    </div>
+    <div class="timer">
+        <div class="item"><span>已用</span><b id="elapsed">00:00:00</b></div>
+        <div class="item"><span>剩余</span><b id="remaining">00:00:00</b></div>
+    </div>
+    <div class="row">
+        <span class="muted" id="sync-note"></span>
+    </div>
+
+    <section>
+        <div class="section-head">
             <h4>题目</h4>
-            <table>
-                <thead>
-                    <tr><th>题号</th><th>状态</th><th>AC时间(分钟)</th><th>错误次数</th><th>罚时</th><th>操作</th></tr>
-                </thead>
-                <tbody id="problems"></tbody>
-            </table>
-        </section>
-        <section>
-            <div class="section-head">
-                <h4>榜单</h4>
-                <span class="freeze-note" id="freeze-note"></span>
-                <button class="secondary" id="btn-add-opponent">添加对手队伍</button>
-            </div>
-            <table>
-                <thead>
-                    <tr><th>名次</th><th>队伍</th><th>通过数</th><th>罚时</th></tr>
-                </thead>
-                <tbody id="ranklist"></tbody>
-            </table>
-            <form class="opponent-form" id="opponent-form" style="display: none;">
-                <input id="op-name" type="text" placeholder="队名" />
-                <input id="op-solved" type="number" min="0" value="0" placeholder="通过数" />
-                <input id="op-penalty" type="number" min="0" value="0" placeholder="罚时" />
-                <button type="submit">添加</button>
-            </form>
-        </section>
-    </div>
-    <div class="toast" id="toast" style="display: none;"></div>
+            <span class="muted" id="problem-note"></span>
+        </div>
+        <table>
+            <thead><tr><th>题号</th><th>题目</th><th>通过率</th><th>难度</th><th>AC/提交</th></tr></thead>
+            <tbody id="problems"></tbody>
+        </table>
+    </section>
+
+    <section>
+        <div class="section-head">
+            <h4>赛时公告</h4>
+            <span class="muted" id="ann-note"></span>
+        </div>
+        <div class="list" id="announcements"><span class="muted">暂无</span></div>
+    </section>
+
+    <section>
+        <div class="section-head">
+            <h4>实时过题</h4>
+            <span class="muted" id="event-note"></span>
+        </div>
+        <div class="list" id="events"><span class="muted">暂无</span></div>
+    </section>
+
+    <section>
+        <h4>队伍协作</h4>
+        <div class="row">
+            <input id="collab-name" type="text" placeholder="你的昵称" style="flex: 0 0 110px;" />
+            <input id="collab-room" type="text" placeholder="房间码" style="flex: 0 0 100px;" />
+            <input id="collab-port" type="text" placeholder="主机端口" style="flex: 0 0 90px;" />
+            <button id="btn-host">开房</button>
+        </div>
+        <div class="row">
+            <input id="collab-host" type="text" placeholder="加入: 主机地址:端口, 如 192.168.1.5:27100" />
+            <button id="btn-join">加入</button>
+            <button class="secondary" id="btn-leave">离开</button>
+        </div>
+        <div class="row">
+            <label class="muted"><input id="share-file" type="checkbox" style="flex: none;" /> 共享当前文件</label>
+            <span class="muted" id="collab-note"></span>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-head">
+            <h4>实时聊天</h4>
+            <span class="muted" id="chat-note"></span>
+        </div>
+        <div class="list" id="chat"></div>
+        <div class="chat-input">
+            <input id="chat-text" type="text" placeholder="输入消息, 回车发送" />
+            <button id="btn-send">发送</button>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-head">
+            <h4>队友代码</h4>
+            <span class="muted" id="peer-note"></span>
+            <button class="secondary" id="btn-save-peer" disabled>保存到工作区</button>
+        </div>
+        <pre id="peer-code" class="hidden"></pre>
+    </section>
+
+    <div class="toast hidden" id="toast"></div>
 <script nonce="__NONCE__">
     const vscodeApi = acquireVsCodeApi();
-    const STATUS_TEXT = { idle: '未开始', running: '进行中', paused: '已暂停', ended: '已结束' };
-    let snapshot = null;
-    let receivedAt = 0;
+    const STATUS_TEXT = { idle: '未开始', running: '进行中', ended: '已结束' };
+    const FREEZE_MS = 3600000;
+    let luogu = null;
+    let events = [];
+    let chat = [];
+    let ws = null;
+    let room = '';
+    let myName = '';
+    let peerCode = null;
     let toastTimer = null;
-    let freezeRequested = false;
+    let hostInfo = '';
+    let roomPeers = 0;
 
     function escapeHtml(value) {
         return String(value === undefined || value === null ? '' : value)
@@ -203,149 +260,176 @@
         return pad2(h) + ':' + pad2(m) + ':' + pad2(s);
     }
 
-    function computeFrozen(elapsed) {
-        const cfg = snapshot && snapshot.config;
-        if (!cfg || !(cfg.freezeMinutes > 0)) {
-            return false;
+    function timeText(seconds) {
+        if (!seconds) {
+            return '—';
         }
-        if (!snapshot.state || snapshot.state.status !== 'running') {
-            return false;
+        const d = new Date(seconds * 1000);
+        return pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' '
+            + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    }
+
+    function contestPhase(info, now) {
+        const nowSec = now / 1000;
+        if (!info || !info.startTime) {
+            return 'idle';
         }
-        return elapsed >= (cfg.durationMinutes - cfg.freezeMinutes) * 60000;
+        if (nowSec < info.startTime) {
+            return 'idle';
+        }
+        if (nowSec >= info.endTime) {
+            return 'ended';
+        }
+        return 'running';
+    }
+
+    function frozenNow(info, now) {
+        return contestPhase(info, now) === 'running' && now / 1000 >= info.endTime - FREEZE_MS / 1000;
     }
 
     function tick() {
-        if (!snapshot || !snapshot.config) {
+        const info = luogu && luogu.info;
+        const now = Date.now();
+        const phase = contestPhase(info, now);
+        const badge = document.getElementById('badge');
+        if (!info) {
+            badge.className = 'badge idle';
+            badge.textContent = '未同步';
+            document.getElementById('elapsed').textContent = '00:00:00';
+            document.getElementById('remaining').textContent = '00:00:00';
             return;
         }
-        const running = snapshot.state && snapshot.state.status === 'running';
-        const delta = running ? Date.now() - receivedAt : 0;
-        const elapsed = (snapshot.elapsedMs || 0) + delta;
-        const remaining = snapshot.config.durationMinutes * 60000 - elapsed;
-        const liveFrozen = computeFrozen(elapsed);
-        if (liveFrozen !== !!snapshot.frozen && freezeRequested !== liveFrozen) {
-            freezeRequested = liveFrozen;
-            vscodeApi.postMessage({ type: 'refresh' });
-        }
-        document.getElementById('elapsed').textContent = hhmmss(elapsed);
+        const frozen = frozenNow(info, now);
+        badge.className = 'badge ' + (frozen ? 'frozen' : phase);
+        badge.textContent = frozen ? '封榜中' : (STATUS_TEXT[phase] || phase);
+        const elapsed = now / 1000 - info.startTime;
+        const remaining = info.endTime - now / 1000;
+        document.getElementById('elapsed').textContent = hhmmss(Math.max(0, elapsed) * 1000);
         const remEl = document.getElementById('remaining');
         if (remaining < 0) {
-            remEl.textContent = '-' + hhmmss(-remaining);
+            remEl.textContent = '-' + hhmmss(-remaining * 1000);
             remEl.classList.add('over');
         } else {
-            remEl.textContent = hhmmss(remaining);
+            remEl.textContent = hhmmss(remaining * 1000);
             remEl.classList.remove('over');
         }
     }
 
-    function setJudgeButtonsDisabled(disabled) {
+    function renderProblems() {
         const body = document.getElementById('problems');
-        Array.prototype.forEach.call(body.querySelectorAll('.judge-btn'), function (btn) {
-            if (disabled) {
-                btn.disabled = true;
-            } else {
-                btn.disabled = btn.getAttribute('data-available') !== '1';
-            }
-        });
-    }
-
-    function renderProblems(config) {
-        const body = document.getElementById('problems');
-        if (!config || !config.problems || !config.problems.length) {
-            body.innerHTML = '<tr><td colspan="6" class="muted">无题目</td></tr>';
+        const problems = (luogu && luogu.problems) || [];
+        if (!problems.length) {
+            body.innerHTML = '<tr><td colspan="5" class="muted">暂无题目</td></tr>';
             return;
         }
-        const statsMap = {};
-        (snapshot.problemStats || []).forEach(function (s) {
-            statsMap[s.label] = s;
-        });
-        body.innerHTML = config.problems.map(function (p) {
-            const st = statsMap[p.label] || { label: p.label, solved: false, wrongCount: 0, penalty: 0 };
-            let statusText;
-            let statusCls;
-            if (st.solved) {
-                statusText = '已通过';
-                statusCls = 'st-ok';
-            } else if (st.wrongCount > 0) {
-                statusText = '尝试中';
-                statusCls = 'st-try';
-            } else {
-                statusText = '未提交';
-                statusCls = 'st-none';
-            }
-            const acTime = st.solved && st.acMinute !== undefined ? String(st.acMinute) : '—';
-            const penalty = st.solved ? String(st.penalty) : '—';
-            const label = escapeHtml(p.label);
-            const titleSuffix = p.title && p.title !== p.label ? '<span class="muted"> ' + escapeHtml(p.title) + '</span>' : '';
-            const note = p.available ? '' : ' title="题目目录不可用"';
+        body.innerHTML = problems.map(function (p) {
+            const rate = Math.round((p.acRate || 0) * 100) + '%';
             return '<tr>'
-                + '<td class="mono">' + label + titleSuffix + '</td>'
-                + '<td class="' + statusCls + '">' + statusText + '</td>'
-                + '<td class="tnum">' + acTime + '</td>'
-                + '<td class="tnum">' + st.wrongCount + '</td>'
-                + '<td class="tnum">' + penalty + '</td>'
-                + '<td><button class="judge-btn" data-label="' + label + '" data-available="' + (p.available ? '1' : '0') + '"' + (p.available ? '' : ' disabled') + note + '>评测</button></td>'
+                + '<td class="mono">' + escapeHtml(p.label) + '</td>'
+                + '<td>' + escapeHtml(p.name || p.pid) + '</td>'
+                + '<td class="tnum">' + rate + '</td>'
+                + '<td>' + escapeHtml(p.difficulty) + '</td>'
+                + '<td class="tnum">' + p.accepted + '/' + p.submitted + '</td>'
                 + '</tr>';
         }).join('');
-        Array.prototype.forEach.call(body.querySelectorAll('.judge-btn'), function (btn) {
-            btn.addEventListener('click', function () {
-                if (btn.disabled) {
-                    return;
-                }
-                vscodeApi.postMessage({ type: 'judge', label: btn.getAttribute('data-label') });
-                setJudgeButtonsDisabled(true);
-            });
-        });
     }
 
-    function renderRanklist() {
-        const body = document.getElementById('ranklist');
-        const rows = snapshot.ranklist || [];
-        if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="4" class="muted">暂无</td></tr>';
+    function renderAnnouncements() {
+        const box = document.getElementById('announcements');
+        const anns = events.filter(function (e) { return e.kind === 'announcement'; });
+        document.getElementById('ann-note').textContent = anns.length ? anns.length + ' 条' : '';
+        if (!anns.length) {
+            box.innerHTML = '<span class="muted">暂无</span>';
             return;
         }
-        body.innerHTML = rows.map(function (r, i) {
-            return '<tr class="' + (r.isSelf ? 'self' : '') + '">'
-                + '<td class="tnum">' + (i + 1) + '</td>'
-                + '<td>' + escapeHtml(r.name) + '</td>'
-                + '<td class="tnum">' + r.solved + '</td>'
-                + '<td class="tnum">' + r.penalty + '</td>'
-                + '</tr>';
+        box.innerHTML = anns.slice().reverse().map(function (e) {
+            return '<div class="item">' + escapeHtml(e.text)
+                + '<div class="meta">' + escapeHtml(timeText(e.at)) + '</div></div>';
         }).join('');
+    }
+
+    function renderEvents() {
+        const box = document.getElementById('events');
+        const rows = events.filter(function (e) {
+            return e.kind === 'ac' || e.kind === 'first-blood';
+        });
+        document.getElementById('event-note').textContent = rows.length ? rows.length + ' 条' : '';
+        if (!rows.length) {
+            box.innerHTML = '<span class="muted">暂无</span>';
+            return;
+        }
+        box.innerHTML = rows.slice().reverse().map(function (e) {
+            const cls = e.kind === 'first-blood' ? 'item blood' : 'item';
+            const time = e.at ? timeText(e.at) : '';
+            return '<div class="' + cls + '">'
+                + escapeHtml(e.text)
+                + '<div class="meta">' + escapeHtml(time) + '</div>'
+                + '</div>';
+        }).join('');
+    }
+
+    function renderChat() {
+        const box = document.getElementById('chat');
+        if (!chat.length) {
+            box.innerHTML = '<span class="muted">暂无消息</span>';
+            return;
+        }
+        box.innerHTML = chat.slice(-100).map(function (m) {
+            return '<div class="item"><b>' + escapeHtml(m.name) + '</b>: '
+                + escapeHtml(m.text)
+                + '<div class="meta">' + escapeHtml(timeText(Math.floor(m.at / 1000))) + '</div></div>';
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function renderPeer() {
+        const pre = document.getElementById('peer-code');
+        const note = document.getElementById('peer-note');
+        const btn = document.getElementById('btn-save-peer');
+        if (!peerCode) {
+            pre.classList.add('hidden');
+            note.textContent = '';
+            btn.disabled = true;
+            return;
+        }
+        pre.classList.remove('hidden');
+        pre.textContent = peerCode.content;
+        note.textContent = peerCode.name + ' · ' + peerCode.file + ' · L' + (peerCode.line || 1);
+        btn.disabled = false;
+    }
+
+    function renderCollab() {
+        const note = document.getElementById('collab-note');
+        if (hostInfo) {
+            note.textContent = hostInfo;
+            return;
+        }
+        if (!ws || ws.readyState !== 1) {
+            note.textContent = '';
+            return;
+        }
+        note.textContent = '已连接' + (room ? ' · 房间 ' + room : '')
+            + (roomPeers ? ' · ' + roomPeers + ' 人' : '');
     }
 
     function render() {
-        const empty = document.getElementById('empty');
-        const main = document.getElementById('main');
-        if (!snapshot) {
-            empty.style.display = '';
-            main.style.display = 'none';
-            return;
-        }
-        empty.style.display = 'none';
-        main.style.display = '';
-        const config = snapshot.config;
-        document.getElementById('contest-name').textContent = config ? config.name : '未载入比赛';
-        const status = snapshot.state ? snapshot.state.status : 'idle';
-        const badge = document.getElementById('badge');
-        badge.className = 'badge ' + status;
-        badge.textContent = STATUS_TEXT[status] || status;
-        document.getElementById('btn-start').disabled = status === 'running' || status === 'ended';
-        document.getElementById('btn-pause').disabled = status !== 'running';
-        document.getElementById('btn-end').disabled = status === 'idle' || status === 'ended';
-        document.getElementById('btn-reset').disabled = false;
-        document.getElementById('running-note').textContent = '';
-        const freezeNote = document.getElementById('freeze-note');
-        if (snapshot.frozen && config) {
-            freezeNote.textContent = '已封榜 (冻结于 ' + hhmmss((config.durationMinutes - config.freezeMinutes) * 60000) + ')';
-        } else if (config && config.freezeMinutes > 0 && status === 'ended') {
-            freezeNote.textContent = '已解榜';
-        } else {
-            freezeNote.textContent = '';
-        }
-        renderProblems(config);
-        renderRanklist();
+        const info = luogu && luogu.info;
+        document.getElementById('contest-name').textContent = info ? info.name : '未同步比赛';
+        document.getElementById('sync-note').textContent = luogu
+            ? (luogu.error
+                ? luogu.error
+                : '更新于 ' + new Date(luogu.updatedAt).toLocaleTimeString()
+                    + (luogu.online ? '' : ' · 离线'))
+            : '';
+        document.getElementById('problem-note').textContent = info && info.problemCount
+            ? ('共 ' + info.problemCount + ' 题')
+            : '';
+        renderProblems();
+        renderAnnouncements();
+        renderEvents();
+        renderChat();
+        renderPeer();
+        renderCollab();
         tick();
     }
 
@@ -353,47 +437,139 @@
         const el = document.getElementById('toast');
         el.className = 'toast ' + (level === 'warn' ? 'warn' : 'info');
         el.textContent = message;
-        el.style.display = '';
+        el.classList.remove('hidden');
         if (toastTimer) {
             clearTimeout(toastTimer);
         }
         toastTimer = setTimeout(function () {
-            el.style.display = 'none';
+            el.classList.add('hidden');
         }, 4000);
     }
 
-    document.getElementById('load-empty').addEventListener('click', function () {
-        vscodeApi.postMessage({ type: 'load' });
+    function connect(url, roomCode, name) {
+        if (ws) {
+            try { ws.close(); } catch (e) { }
+            ws = null;
+        }
+        room = roomCode;
+        myName = name;
+        try {
+            ws = new WebSocket(url);
+        } catch (e) {
+            showToast('warn', '连接失败: ' + e.message);
+            return;
+        }
+        ws.onopen = function () {
+            ws.send(JSON.stringify({ type: 'join', room: roomCode, name: name }));
+            if (document.getElementById('share-file').checked) {
+                vscodeApi.postMessage({ type: 'share' });
+            }
+            renderCollab();
+        };
+        ws.onmessage = function (event) {
+            let m;
+            try { m = JSON.parse(event.data); } catch (e) { return; }
+            if (m.type === 'chat') {
+                chat.push({ name: m.name, text: m.text, at: m.at || Date.now() });
+                renderChat();
+            } else if (m.type === 'code') {
+                peerCode = { name: m.name, file: m.file, content: m.content, line: 1 };
+                renderPeer();
+            } else if (m.type === 'cursor' && peerCode) {
+                peerCode.line = m.line;
+                renderPeer();
+            } else if (m.type === 'presence') {
+                if (m.peers) {
+                    roomPeers = m.peers;
+                    renderCollab();
+                }
+                chat.push({ name: '系统', text: m.text, at: Date.now() });
+                renderChat();
+            } else if (m.type === 'joined') {
+                roomPeers = m.peers || 1;
+                showToast('info', '已加入房间 ' + m.room);
+                renderCollab();
+            }
+        };
+        ws.onclose = function () {
+            ws = null;
+            renderCollab();
+            showToast('warn', '协作连接已断开');
+        };
+        ws.onerror = function () {
+            showToast('warn', '协作连接出错');
+        };
+    }
+
+    function sendChat() {
+        const input = document.getElementById('chat-text');
+        const text = input.value.trim();
+        if (!text) {
+            return;
+        }
+        if (!ws || ws.readyState !== 1) {
+            showToast('warn', '尚未加入房间');
+            return;
+        }
+        ws.send(JSON.stringify({ type: 'chat', text: text }));
+        input.value = '';
+    }
+
+    document.getElementById('btn-sync').addEventListener('click', function () {
+        const url = document.getElementById('contest-url').value.trim();
+        if (!url) {
+            showToast('warn', '请填写比赛链接');
+            return;
+        }
+        try {
+            vscodeApi.setState({ url: url });
+        } catch (e) { }
+        vscodeApi.postMessage({ type: 'sync', url: url });
     });
-    document.getElementById('load-main').addEventListener('click', function () {
-        vscodeApi.postMessage({ type: 'load' });
+    document.getElementById('btn-stop').addEventListener('click', function () {
+        vscodeApi.postMessage({ type: 'stopSync' });
     });
-    document.getElementById('btn-start').addEventListener('click', function () {
-        vscodeApi.postMessage({ type: 'start' });
+    document.getElementById('btn-host').addEventListener('click', function () {
+        const name = document.getElementById('collab-name').value.trim() || '队友';
+        const roomCode = document.getElementById('collab-room').value.trim() || 'oi-helper';
+        const port = Number(document.getElementById('collab-port').value) || 0;
+        vscodeApi.postMessage({ type: 'collabStart', name: name, room: roomCode, port: port });
     });
-    document.getElementById('btn-pause').addEventListener('click', function () {
-        vscodeApi.postMessage({ type: 'pause' });
+    document.getElementById('btn-join').addEventListener('click', function () {
+        const name = document.getElementById('collab-name').value.trim() || '队友';
+        const roomCode = document.getElementById('collab-room').value.trim() || 'oi-helper';
+        const host = document.getElementById('collab-host').value.trim();
+        if (!host) {
+            showToast('warn', '请填写主机地址');
+            return;
+        }
+        vscodeApi.postMessage({ type: 'collabStart', name: name, room: roomCode, host: host });
     });
-    document.getElementById('btn-end').addEventListener('click', function () {
-        vscodeApi.postMessage({ type: 'end' });
+    document.getElementById('btn-leave').addEventListener('click', function () {
+        if (ws) {
+            try { ws.close(); } catch (e) { }
+            ws = null;
+        }
+        vscodeApi.postMessage({ type: 'collabStop' });
+        renderCollab();
     });
-    document.getElementById('btn-reset').addEventListener('click', function () {
-        vscodeApi.postMessage({ type: 'reset' });
+    document.getElementById('share-file').addEventListener('change', function (event) {
+        vscodeApi.postMessage({ type: 'setShare', enabled: event.target.checked });
+        if (event.target.checked) {
+            vscodeApi.postMessage({ type: 'share' });
+        }
     });
-    document.getElementById('btn-add-opponent').addEventListener('click', function () {
-        const form = document.getElementById('opponent-form');
-        form.style.display = form.style.display === 'none' ? '' : 'none';
+    document.getElementById('btn-send').addEventListener('click', sendChat);
+    document.getElementById('chat-text').addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            sendChat();
+        }
     });
-    document.getElementById('opponent-form').addEventListener('submit', function (event) {
-        event.preventDefault();
-        const name = document.getElementById('op-name').value;
-        const solved = Number(document.getElementById('op-solved').value) || 0;
-        const penalty = Number(document.getElementById('op-penalty').value) || 0;
-        vscodeApi.postMessage({ type: 'addOpponent', name: name, solved: solved, penalty: penalty });
-        document.getElementById('op-name').value = '';
-        document.getElementById('op-solved').value = '0';
-        document.getElementById('op-penalty').value = '0';
-        document.getElementById('opponent-form').style.display = 'none';
+    document.getElementById('btn-save-peer').addEventListener('click', function () {
+        if (!peerCode) {
+            return;
+        }
+        vscodeApi.postMessage({ type: 'savePeerCode', file: peerCode.file, content: peerCode.content });
     });
 
     window.addEventListener('message', function (event) {
@@ -401,20 +577,47 @@
         if (!message) {
             return;
         }
-        if (message.type === 'state') {
-            snapshot = message.payload;
-            receivedAt = Date.now();
-            freezeRequested = !!(snapshot && snapshot.frozen);
+        if (message.type === 'luogu') {
+            luogu = message.payload;
+            events = (message.payload.events || []).slice();
             render();
-        } else if (message.type === 'running') {
-            setJudgeButtonsDisabled(true);
-            document.getElementById('running-note').textContent = '评测 ' + message.label + ' 中...';
+        } else if (message.type === 'event') {
+            events.push(message.payload);
+            renderEvents();
+            renderAnnouncements();
+        } else if (message.type === 'codeOut') {
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({
+                    type: 'code',
+                    file: message.payload.file,
+                    lang: message.payload.lang,
+                    content: message.payload.content
+                }));
+                if (message.payload.line) {
+                    ws.send(JSON.stringify({ type: 'cursor', file: message.payload.file, line: message.payload.line }));
+                }
+            }
+        } else if (message.type === 'collab') {
+            hostInfo = message.payload.role === 'host'
+                ? ('队友加入 ' + message.payload.lan + ' 房间 ' + message.payload.room)
+                : '';
+            connect(message.payload.url, message.payload.room, message.payload.name);
+            renderCollab();
         } else if (message.type === 'toast') {
             showToast(message.level, message.message);
         }
     });
 
+    try {
+        const saved = vscodeApi.getState();
+        if (saved && saved.url) {
+            document.getElementById('contest-url').value = saved.url;
+            vscodeApi.postMessage({ type: 'sync', url: saved.url });
+        }
+    } catch (e) { }
+
     setInterval(tick, 1000);
+    render();
     vscodeApi.postMessage({ type: 'ready' });
 </script>
 </body>

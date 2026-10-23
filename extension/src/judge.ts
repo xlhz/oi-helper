@@ -12,6 +12,10 @@ export interface TestResult {
     score: number;
     maxScore: number;
     message: string;
+    stderr?: string;
+    actual?: string;
+    expected?: string;
+    diffLine?: number;
 }
 
 export interface SubtaskResult {
@@ -86,6 +90,51 @@ export async function promptJudgePath(): Promise<void> {
     }
 }
 
+// 临时目录: 优先 oiHelper.tempDir; 留空时自动选剩余空间最大的盘, 在其下建 oi-helper-temp
+let cachedTempRoot: string | undefined;
+
+export function tempRoot(): string {
+    if (cachedTempRoot) {
+        return cachedTempRoot;
+    }
+    const configured = (vscode.workspace.getConfiguration('oiHelper').get<string>('tempDir') ?? '').trim();
+    if (configured) {
+        cachedTempRoot = configured;
+    } else {
+        let best: string | undefined;
+        let bestFree = -1;
+        for (let i = 0; i < 26; i += 1) {
+            const root = `${String.fromCharCode(65 + i)}:\\`;
+            try {
+                if (!fs.existsSync(root)) {
+                    continue;
+                }
+                const stat = fs.statfsSync(root);
+                const free = stat.bavail * stat.bsize;
+                if (free > bestFree) {
+                    bestFree = free;
+                    best = path.join(root, 'oi-helper-temp');
+                }
+            } catch {
+                // 无权限或不支持 statfs 的盘符跳过
+            }
+        }
+        cachedTempRoot = best ?? os.tmpdir();
+    }
+    try {
+        fs.mkdirSync(cachedTempRoot, { recursive: true });
+    } catch {
+        cachedTempRoot = os.tmpdir();
+    }
+    return cachedTempRoot;
+}
+
+// 子进程环境: 把 TEMP/TMP 指向临时目录, 使 oi-judge 的临时文件一并转移
+export function spawnEnv(): NodeJS.ProcessEnv {
+    const dir = tempRoot();
+    return { ...process.env, TEMP: dir, TMP: dir };
+}
+
 function buildArgs(options: JudgeOptions, jsonPath: string): string[] {
     const args: string[] = [];
     const push = (key: string, value: string | number | undefined): void => {
@@ -115,12 +164,12 @@ function buildArgs(options: JudgeOptions, jsonPath: string): string[] {
 
 // 调用 oi-judge 并读取结果 JSON
 export function runJudge(exe: string, options: JudgeOptions, output: vscode.OutputChannel): Promise<JudgeResult> {
-    const jsonPath = path.join(os.tmpdir(), `oi-judge-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
+    const jsonPath = path.join(tempRoot(), `oi-judge-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
     const args = buildArgs(options, jsonPath);
     return new Promise<JudgeResult>((resolve, reject) => {
         output.appendLine(`[oi-judge] ${exe} ${args.join(' ')}`);
         output.appendLine(`[oi-judge] cwd: ${options.cwd}`);
-        const child = spawn(exe, args, { cwd: options.cwd, windowsHide: true });
+        const child = spawn(exe, args, { cwd: options.cwd, windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });

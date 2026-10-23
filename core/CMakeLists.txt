@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(oi_judge CXX)
+project(oi_judge VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -27,6 +27,11 @@ add_executable(oi-judge
 )
 
 target_include_directories(oi-judge PRIVATE include)
+
+target_compile_definitions(oi-judge PRIVATE
+    OI_DISPLAY_VERSION="V0.1.0-100"
+    OI_BUILD=100
+)
 
 if(WIN32)
     target_link_libraries(oi-judge PRIVATE kernel32 psapi ws2_32 winhttp)

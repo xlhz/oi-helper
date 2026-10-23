@@ -80,12 +80,14 @@ CompareResult compareDiff(const std::string& participantFile, const std::string&
     for (size_t i = 0; i < n; ++i) {
         if (pa[i] != ans[i]) {
             r.message = lineMessage(i + 1, pa[i], ans[i]);
+            r.line = static_cast<int>(i + 1);
             return r;
         }
     }
     if (pa.size() != ans.size()) {
         r.message = "行数不同: 选手=" + std::to_string(pa.size()) + " 期望=" +
                     std::to_string(ans.size());
+        r.line = static_cast<int>(n + 1);
         return r;
     }
     r.equal = true;
@@ -109,6 +111,7 @@ CompareResult compareFloat(const std::string& participantFile, const std::string
     if (pa.size() != ans.size()) {
         r.message = "行数不同: 选手=" + std::to_string(pa.size()) + " 期望=" +
                     std::to_string(ans.size());
+        r.line = static_cast<int>(std::min(pa.size(), ans.size()) + 1);
         return r;
     }
     for (size_t i = 0; i < pa.size(); ++i) {
@@ -116,6 +119,7 @@ CompareResult compareFloat(const std::string& participantFile, const std::string
         std::vector<std::string> ta = tokenize(ans[i]);
         if (tp.size() != ta.size()) {
             r.message = "第 " + std::to_string(i + 1) + " 行 token 数不同";
+            r.line = static_cast<int>(i + 1);
             return r;
         }
         for (size_t j = 0; j < tp.size(); ++j) {
@@ -131,6 +135,7 @@ CompareResult compareFloat(const std::string& participantFile, const std::string
             if (!eq) {
                 r.message = "第 " + std::to_string(i + 1) + " 行第 " + std::to_string(j + 1) +
                             " 个 token 不同: 选手=\"" + tp[j] + "\" 期望=\"" + ta[j] + "\"";
+                r.line = static_cast<int>(i + 1);
                 return r;
             }
         }

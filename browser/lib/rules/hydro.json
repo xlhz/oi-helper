@@ -1,0 +1,82 @@
+{
+    "id": "hydro",
+    "name": "Hydro",
+    "version": "1.0.0",
+    "domains": [
+        "hydro.ac"
+    ],
+    "features": {
+        "problem": {
+            "urlPatterns": [
+                "/p/[A-Za-z0-9_]+",
+                "/d/[^/]+/p/"
+            ],
+            "selectors": [
+                ".problem-content",
+                ".problem__content",
+                ".problem-section",
+                ".section__body",
+                ".problem-title"
+            ]
+        },
+        "login": {
+            "urlPatterns": [
+                "/login"
+            ],
+            "selectors": [
+                "input[name=\"username\"]",
+                "input[name=\"password\"]",
+                "form[action*=\"login\"]"
+            ]
+        }
+    },
+    "selectors": {
+        "pid": [
+            ".problem-id",
+            ".problem__id"
+        ],
+        "title": [
+            ".problem-title",
+            ".problem__title",
+            "h1"
+        ],
+        "statement": [
+            ".problem-content",
+            ".problem__content",
+            ".problem-section .section__body",
+            ".section__body"
+        ],
+        "timeLimit": [
+            ".problem-limit",
+            ".problem__limit"
+        ],
+        "memoryLimit": [
+            ".problem-limit",
+            ".problem__limit"
+        ],
+        "sampleInput": [
+            ".sample input pre",
+            ".sample .in pre",
+            ".problem-sample .in pre"
+        ],
+        "sampleOutput": [
+            ".sample output pre",
+            ".sample .out pre",
+            ".problem-sample .out pre"
+        ],
+        "loginUser": [
+            "input[name=\"username\"]",
+            "input[name=\"uname\"]"
+        ],
+        "loginPass": [
+            "input[name=\"password\"]",
+            "input[type=\"password\"]"
+        ],
+        "captchaImage": [
+            "img[src*=\"captcha\"]",
+            "img[src*=\"verify\"]"
+        ]
+    },
+    "pidPattern": "/p/([A-Za-z0-9_]+)",
+    "pidTemplate": "$1"
+}

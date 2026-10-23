@@ -1,0 +1,68 @@
+{
+    "name": "oi-helper-desktop",
+    "version": "0.1.0",
+    "private": true,
+    "description": "OI Helper 桌面管理程序",
+    "author": "OI Helper",
+    "license": "MIT",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "electron .",
+        "dist": "electron-builder --win"
+    },
+    "devDependencies": {
+        "electron": "45.0.0",
+        "electron-builder": "26.15.3"
+    },
+    "build": {
+        "appId": "com.oihelper.desktop",
+        "productName": "OI Helper",
+        "directories": {
+            "output": "dist",
+            "buildResources": "build"
+        },
+        "files": [
+            "src/**/*",
+            "renderer/**/*",
+            "float/**/*",
+            "bin/**/*",
+            "package.json"
+        ],
+        "extraResources": [
+            {
+                "from": "../mcp",
+                "to": "mcp",
+                "filter": [
+                    "**/*",
+                    "!node_modules/**/*"
+                ]
+            },
+            {
+                "from": "../extension",
+                "to": "extension",
+                "filter": [
+                    "*.vsix"
+                ]
+            },
+            {
+                "from": "../installer",
+                "to": "installer",
+                "filter": [
+                    "*.ps1"
+                ]
+            }
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "build/icon.ico"
+        },
+        "nsis": {
+            "oneClick": false,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": true,
+            "include": "build/installer.nsh",
+            "shortcutName": "OI Helper",
+            "artifactName": "OI-Helper-${version}-setup.${ext}"
+        }
+    }
+}

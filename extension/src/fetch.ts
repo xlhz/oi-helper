@@ -4,6 +4,7 @@ import * as path from 'path';
 import { spawn } from 'child_process';
 import { OriginalRef, normalizeCookie, ojCookie, ojLabel, ojOfUrl } from './original';
 import { absolutizeMarkdown, htmlToMarkdown, setMarkdownBase } from './problem';
+import { spawnEnv } from './judge';
 
 export interface FetchOptions {
     url: string;
@@ -85,7 +86,8 @@ export interface ContestSummary {
     dataRange?: string;
     download?: string;
     startTime?: string;   // 开始时间(个人时间线优先)
-    endTime?: string;     // 结束时间(个人时间线优先)
+    endTime?: string;     // 结束时间(个人时间线优先); rule 1/2 的比赛为比赛结束
+    correctionEnd?: string; // 补题截止(rule 1/2 的比赛)
     classId?: string;     // 所属班级
     sessionEnd?: string;  // 训练会话截止(用于倒计时)
     fileIO?: boolean;     // 是否文件 IO
@@ -256,7 +258,7 @@ export function runFetch(exe: string, options: FetchOptions, output: vscode.Outp
     return new Promise<FetchSummary>((resolve) => {
         const safeArgs = args.map((arg, i) => (i > 0 && (args[i - 1] === '--fetch-pass' || args[i - 1] === '--fetch-cookie') ? '****' : arg));
         output.appendLine(`[oi-judge] ${exe} ${safeArgs.join(' ')}`);
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -326,7 +328,7 @@ export function runFetchContest(exe: string, url: string, user: string | undefin
     args.push('--pretty');
     return new Promise<ContestSummary>((resolve) => {
         output.appendLine(`[oi-judge] ${exe} --fetch-contest ${url}`);
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -375,7 +377,7 @@ export function runFetchExtra(exe: string, url: string, outDir: string, user: st
     args.push('--pretty');
     return new Promise<ExtraSummary>((resolve) => {
         output.appendLine(`[oi-judge] ${exe} --fetch-extra ${url}`);
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -437,7 +439,7 @@ export function runFetchOriginal(exe: string, url: string, cookie: string, outpu
     args.push('--pretty');
     return new Promise<OriginalSummary>((resolve) => {
         output.appendLine(`[oi-judge] ${exe} --fetch-original ${url}`);
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -546,7 +548,7 @@ export function runSubmitOriginal(exe: string, url: string, file: string, lang: 
     args.push('--pretty');
     return new Promise<OriginalSubmitSummary>((resolve) => {
         output.appendLine(`[oi-judge] ${exe} --submit-original ${url}`);
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -610,7 +612,7 @@ export function runSubmitResult(exe: string, solutionId: number, user: string | 
     }
     args.push('--pretty');
     return new Promise<SubmitStateSummary>((resolve) => {
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -637,7 +639,7 @@ export function runSubmitResultLuogu(exe: string, rid: number, cookie: string, o
     }
     args.push('--pretty');
     return new Promise<SubmitStateSummary>((resolve) => {
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -668,7 +670,7 @@ export function runSubmitResultHydro(exe: string, rid: string, base: string, coo
     }
     args.push('--pretty');
     return new Promise<SubmitStateSummary>((resolve) => {
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
@@ -685,6 +687,134 @@ export function runSubmitResultHydro(exe: string, rid: string, base: string, coo
             resolve({ ok: false, error: stderr.trim() || summary?.error || `oi-judge 退出码 ${code}.` });
         });
     });
+}
+
+// 洛谷题目难度查询结果
+export interface DifficultySummary {
+    ok: boolean;
+    error?: string;
+    pid?: string;
+    difficulty?: number;
+    text?: string;
+}
+
+// 调用 oi-judge --difficulty 查询洛谷题目难度
+export function runDifficulty(exe: string, pid: string, cookie: string, output: vscode.OutputChannel): Promise<DifficultySummary> {
+    const args: string[] = ['--difficulty', pid];
+    if (cookie) {
+        args.push('--fetch-cookie', cookie);
+    }
+    args.push('--pretty');
+    return new Promise<DifficultySummary>((resolve) => {
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+        child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+        child.on('error', (err: Error) => {
+            resolve({ ok: false, error: `无法启动 oi-judge: ${err.message}` });
+        });
+        child.on('close', (code: number | null) => {
+            const summary = parseSummary<DifficultySummary>(stdout);
+            if (summary && summary.ok) {
+                resolve(summary);
+                return;
+            }
+            resolve({ ok: false, error: stderr.trim() || summary?.error || `oi-judge 退出码 ${code}.` });
+        });
+    });
+}
+
+// 难度缓存: 同一题号短期内不重复查询
+const difficultyCache = new Map<string, { at: number; data: DifficultySummary }>();
+
+// 查询洛谷难度流程: 自动带洛谷 Cookie; 命中缓存则直接复用
+export async function fetchDifficultyFlow(pid: string, exe: string, output: vscode.OutputChannel): Promise<DifficultySummary> {
+    const key = pid.trim().toUpperCase();
+    if (!key) {
+        return { ok: false, error: '缺少题号' };
+    }
+    const ttl = cacheTtlMs();
+    if (ttl > 0) {
+        const hit = difficultyCache.get(key);
+        if (hit && Date.now() - hit.at < ttl) {
+            return hit.data;
+        }
+    }
+    const cookie = (await resolveLuoguCookie()) ?? '';
+    const data = await runDifficulty(exe, key, cookie, output);
+    if (data.ok && ttl > 0) {
+        difficultyCache.set(key, { at: Date.now(), data });
+    }
+    return data;
+}
+
+// 清除难度缓存(刷新题目时一并清除)
+export function clearDifficultyCache(): void {
+    difficultyCache.clear();
+}
+
+// 洛谷关键词检索结果项
+export interface LuoguSearchItem {
+    pid: string;
+    name: string;
+}
+
+export interface LuoguSearchSummary {
+    ok: boolean;
+    error?: string;
+    items?: LuoguSearchItem[];
+}
+
+// 调用 oi-judge --search-luogu 按关键词检索洛谷题目
+export function runSearchLuogu(exe: string, keyword: string, cookie: string, output: vscode.OutputChannel): Promise<LuoguSearchSummary> {
+    const args: string[] = ['--search-luogu', keyword];
+    if (cookie) {
+        args.push('--fetch-cookie', cookie);
+    }
+    args.push('--pretty');
+    return new Promise<LuoguSearchSummary>((resolve) => {
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+        child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+        child.on('error', (err: Error) => {
+            resolve({ ok: false, error: `无法启动 oi-judge: ${err.message}` });
+        });
+        child.on('close', (code: number | null) => {
+            const summary = parseSummary<LuoguSearchSummary>(stdout);
+            if (summary && summary.ok) {
+                resolve(summary);
+                return;
+            }
+            resolve({ ok: false, error: stderr.trim() || summary?.error || `oi-judge 退出码 ${code}.` });
+        });
+    });
+}
+
+// 洛谷检索缓存: 同一关键词短期内不重复检索(避免换题来回切时反复起进程而卡顿)
+const searchCache = new Map<string, { at: number; data: LuoguSearchSummary }>();
+
+// 检索洛谷题目流程: 自动带洛谷 Cookie; 命中缓存则直接复用
+export async function searchLuoguFlow(keyword: string, exe: string, output: vscode.OutputChannel): Promise<LuoguSearchSummary> {
+    const kw = keyword.trim();
+    if (!kw) {
+        return { ok: false, error: '缺少关键词' };
+    }
+    const ttl = cacheTtlMs();
+    if (ttl > 0) {
+        const hit = searchCache.get(kw);
+        if (hit && Date.now() - hit.at < ttl) {
+            return hit.data;
+        }
+    }
+    const cookie = (await resolveLuoguCookie()) ?? '';
+    const data = await runSearchLuogu(exe, kw, cookie, output);
+    if (data.ok && ttl > 0) {
+        searchCache.set(kw, { at: Date.now(), data });
+    }
+    return data;
 }
 
 function buildSubmitArgs(options: SubmitOptions): string[] {
@@ -707,7 +837,7 @@ export function runSubmit(exe: string, options: SubmitOptions, output: vscode.Ou
     return new Promise<SubmitSummary>((resolve) => {
         const safeArgs = args.map((arg, i) => (i > 0 && args[i - 1] === '--fetch-pass' ? '****' : arg));
         output.appendLine(`[oi-judge] ${exe} ${safeArgs.join(' ')}`);
-        const child = spawn(exe, args, { windowsHide: true });
+        const child = spawn(exe, args, { windowsHide: true, env: spawnEnv() });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });

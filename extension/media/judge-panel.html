@@ -254,6 +254,7 @@ samp {
                                 <label class="field-label">选择题目</label>
                                 <div class="input-group nav-group">
                                     <span class="nav-title" id="nav-title" hidden></span>
+                                    <span class="diff-chip" id="nav-diff" hidden></span>
                                     <button class="btn btn-secondary" type="button" id="nav-prev"><i data-lucide="chevron-left"></i><span>上一题</span></button>
                                     <select class="inp nav-sel" id="nav-select" disabled></select>
                                     <button class="btn btn-secondary" type="button" id="nav-next"><i data-lucide="chevron-right"></i><span>下一题</span></button>
@@ -268,7 +269,7 @@ samp {
                                     <select class="inp nav-sel" id="orig-oj" title="选择原题站点" disabled></select>
                                     <button class="btn btn-secondary" type="button" id="orig-open"><i data-lucide="external-link"></i><span>查看原题</span></button>
                                     <button class="btn btn-secondary" type="button" id="orig-preview"><i data-lucide="book-open"></i><span>预览原题</span></button>
-                                    <button class="btn btn-secondary" type="button" id="orig-samples"><i data-lucide="download"></i><span>原题样例</span></button>
+                                    <button class="btn btn-secondary" type="button" id="orig-samples" title="右键可下载所有原题的样例"><i data-lucide="download"></i><span>原题样例</span></button>
                                     <button class="btn btn-secondary" type="button" id="orig-link"><i data-lucide="link"></i><span>复制链接</span></button>
                                     <button class="btn btn-primary" type="button" id="orig-submit"><i data-lucide="upload"></i><span>提交原题</span></button>
                                 </div>
@@ -447,6 +448,8 @@ samp {
 
     @media (max-width: 760px) {
         .app-statusbar { display: none; }
+        /* 窄面板: 输入框独占一行, 按钮换行到下方, 避免网址/路径被挤到无法输入 */
+        .input-group:not(.nav-group) > .inp { flex: 1 1 100%; }
     }
 </style>
 
@@ -547,6 +550,29 @@ samp {
     .nav-title[hidden] {
         display: none;
     }
+
+    /* 题目难度: 洛谷配色(级 0-7 对应洛谷评定色), 无难度时隐藏 */
+    .diff-chip {
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #fff;
+        background: #bfbfbf;
+        white-space: nowrap;
+    }
+
+    .diff-chip[hidden] {
+        display: none;
+    }
+
+    .diff-chip.lv-1 { background: #fe4c61; }
+    .diff-chip.lv-2 { background: #f39c11; }
+    .diff-chip.lv-3 { background: #ffc116; }
+    .diff-chip.lv-4 { background: #52c41a; }
+    .diff-chip.lv-5 { background: #3498db; }
+    .diff-chip.lv-6 { background: #9d3dcf; }
+    .diff-chip.lv-7 { background: #0e1d69; }
 
     .case-head-label {
         display: inline-flex;
@@ -809,12 +835,13 @@ samp {
 
     .input-group {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 8px;
         min-width: 0;
     }
 
-    .input-group .inp { flex: 1 1 auto; }
+    .input-group .inp { flex: 1 1 200px; }
 
     .inp {
         width: 100%;
@@ -1883,15 +1910,11 @@ samp {
                     sel.value = keep;
                 }
             }
+            // 仅识别出原题站点时显示整栏, 未识别时隐藏
+            const show = refs.length > 0;
             if (refs.length) {
                 setOrigHint('来源 ' + (payload.source || '') + ' · ' + refs.join(' / '), 't-success');
-            } else if (payload.source) {
-                setOrigHint('来源 ' + payload.source + ' (未识别出原题站点)', 't-error');
-            } else {
-                setOrigHint('当前题目没有来源信息 (用竞赛链接导入后可获取)');
             }
-            // 没有来源信息时整栏隐藏
-            const show = refs.length > 0 || !!payload.source;
             ['orig-row', 'orig-hint-row'].forEach(function (id) {
                 const el = document.getElementById(id);
                 if (el) {
@@ -1905,6 +1928,28 @@ samp {
             const sel = document.getElementById('orig-oj');
             const value = sel ? Number(sel.value) : 0;
             return Number.isFinite(value) && value >= 0 ? value : 0;
+        }
+
+        // 题目难度徽标: 有难度时按洛谷级配色显示
+        function applyDifficultyState(payload) {
+            const el = document.getElementById('nav-diff');
+            if (!el) {
+                return;
+            }
+            const text = (payload && payload.text) || '';
+            if (!text) {
+                el.hidden = true;
+                el.textContent = '';
+                el.className = 'diff-chip';
+                el.removeAttribute('title');
+                return;
+            }
+            const lv = Number(payload && payload.level);
+            const cls = Number.isFinite(lv) && lv >= 0 && lv <= 7 ? ' lv-' + lv : '';
+            el.hidden = false;
+            el.textContent = text;
+            el.className = 'diff-chip' + cls;
+            el.title = '难度 ' + text;
         }
 
         // 提交后轮询到的评测结果
@@ -2219,6 +2264,10 @@ samp {
                 applyOrigState(message.payload);
                 return;
             }
+            if (message.type === 'difficultyState') {
+                applyDifficultyState(message.payload);
+                return;
+            }
             if (message.type === 'origHint') {
                 setOrigHint((message.payload && message.payload.text) || '', (message.payload && message.payload.kind) || '');
                 return;
@@ -2465,6 +2514,16 @@ samp {
                 });
             });
         });
+
+        // 右键「原题样例」: 下载所有原题站点的样例
+        const origSamplesBtn = document.getElementById('orig-samples');
+        if (origSamplesBtn) {
+            origSamplesBtn.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                setOrigHint('抓取所有原题样例中...');
+                vscode.postMessage({ type: 'origSamplesAll' });
+            });
+        }
 
         const freopenBtn = document.getElementById('freopen-btn');
         if (freopenBtn) {

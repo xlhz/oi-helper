@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
-import { JudgeCase, JudgeOptions, JudgeResult, promptJudgePath, resolveJudgePath, runJudge } from './judge';
-import { ContestSummary, FetchSummary, OriginalSubmitSummary, OriginalSummary, SubmitSummary, cleanUrl, clearOriginalCache, contestProblemUrl, downloadUrlOf, fetchContestFlow, fetchExtraFlow, fetchOriginalFlow, fetchProblemFlow, isContestUrl, isLuoguUrl, isXmojUrl, oldContestUrlToNew, runSubmitResult, runSubmitResultHydro, runSubmitResultLuogu, submitFlow, submitOriginalFlow } from './fetch';
-import { OriginalRef, ojLabel, parseOriginals } from './original';
+import { JudgeCase, JudgeOptions, JudgeResult, promptJudgePath, resolveJudgePath, runJudge, tempRoot } from './judge';
+import { ContestSummary, DifficultySummary, FetchSummary, OriginalSubmitSummary, OriginalSummary, SubmitSummary, cleanUrl, clearOriginalCache, contestProblemUrl, downloadUrlOf, fetchContestFlow, fetchDifficultyFlow, fetchExtraFlow, fetchOriginalFlow, fetchProblemFlow, isContestUrl, isLuoguUrl, isXmojUrl, oldContestUrlToNew, runSubmitResult, runSubmitResultHydro, runSubmitResultLuogu, searchLuoguFlow, submitFlow, submitOriginalFlow } from './fetch';
+import { OriginalRef, luoguRef, ojLabel, parseOriginals } from './original';
 import { ProblemView } from './problemView';
 import type { SubmitViewState } from './resultsView';
 
@@ -50,6 +49,14 @@ function toAbsolute(value?: string): string | undefined {
     }
     const folders = vscode.workspace.workspaceFolders;
     return folders && folders.length > 0 ? path.join(folders[0].uri.fsPath, trimmed) : trimmed;
+}
+
+// 清洗题目标题: 去掉形如 [ CSP-S 2024 ] 的标注前缀, 得可用于洛谷检索的主体
+function cleanPiercedTitle(raw: string): string {
+    return String(raw ?? '')
+        .replace(/[\[【（(][^\]】）)]*[\]】）)]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 // 由题目 URL 判断 OJ 名称, 用于导入测试点的标签
@@ -217,7 +224,7 @@ export class PanelController implements vscode.WebviewViewProvider {
         this.preview.onDidChange((state) => {
             this.extraToken += 1; // 作废上一题未完成的更多样例下载
             this.postNavState();
-            this.setSource(state.source);
+            this.setSource(state.source, state.title);
             this.applyDownload(state.download, state.problemId, state.contestId, state.num);
         });
     }
@@ -387,6 +394,7 @@ export class PanelController implements vscode.WebviewViewProvider {
                 this.pushActiveFile();
                 this.postNavState();
                 this.postOrigState();
+                this.postDifficulty(this.difficultyText, this.difficultyLevel, true);
                 break;
             case 'navigate':
                 await this.navigate(payload.domId ? NAV_TARGETS[payload.domId] : undefined);
@@ -407,7 +415,13 @@ export class PanelController implements vscode.WebviewViewProvider {
                 await this.openPreview(payload.url);
                 break;
             case 'run-judge':
-                await this.runActiveJudge(payload);
+                try {
+                    await this.runActiveJudge(payload);
+                } catch (err) {
+                    this.stateSink?.(false);
+                    this.output.appendLine(`[错误] 评测启动失败: ${String(err)}`);
+                    vscode.window.showErrorMessage(`OI 评测失败: ${String(err)}`);
+                }
                 break;
             case 'fetchProblem':
                 await this.runFetchProblem(payload.url, payload.sampleMode);
@@ -457,6 +471,7 @@ export class PanelController implements vscode.WebviewViewProvider {
             case 'origOpen':
             case 'origPreview':
             case 'origSamples':
+            case 'origSamplesAll':
             case 'origLink':
             case 'origSubmit':
                 await this.runOriginal(payload.type, payload.file, payload.oj);
@@ -672,7 +687,7 @@ export class PanelController implements vscode.WebviewViewProvider {
         }
         // 同步题目导航(选题/跳转)状态, 但不打开预览面板
         this.preview.adopt(summary);
-        this.setSource(summary.source);
+        this.setSource(summary.source, summary.title);
         // 文件 IO: 新版接口的 name 字段即可判定(name.in / name.out), 不依赖旧版页面
         if (summary.freopenIn && summary.freopenOut) {
             this.lastFetch = { name: summary.title, freopenIn: summary.freopenIn, freopenOut: summary.freopenOut };
@@ -834,7 +849,7 @@ export class PanelController implements vscode.WebviewViewProvider {
         let pasteDir: string | undefined;
         const writePasted = (c: { input?: string; expected?: string }): void => {
             if (!pasteDir) {
-                pasteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oi-helper-case-'));
+                pasteDir = fs.mkdtempSync(path.join(tempRoot(), 'oi-helper-case-'));
             }
             const input = path.join(pasteDir, `${cases.length + 1}.in`);
             const expected = path.join(pasteDir, `${cases.length + 1}.ans`);
@@ -1040,7 +1055,7 @@ export class PanelController implements vscode.WebviewViewProvider {
         }
         if (summary.ok) {
             this.output.appendLine(`[抓取] ${summary.name ?? ''} -> ${summary.dir || '(内联样例)'}`);
-            this.setSource(summary.source);
+            this.setSource(summary.source, summary.name);
             // 普通题目(做题链接): 同步题目编号, 供面板「跳转」按题目编号换题
             this.preview.adoptPlain(target, summary.name);
             this.lastFetch = {
@@ -1420,14 +1435,76 @@ export class PanelController implements vscode.WebviewViewProvider {
 
     private sourceText = '';
 
-    private setSource(source?: string): void {
+    private sourceTitle = '';
+
+    // 题目难度(洛谷级配色): text 为空表示无/未获取
+    private difficultyText = '';
+
+    private difficultyLevel = -1;
+
+    private setSource(source?: string, title?: string): void {
         this.sourceText = (source ?? '').trim();
+        this.sourceTitle = (title ?? '').trim();
         this.originals = parseOriginals(this.sourceText);
         // 记录来源解析结果, 便于排查「原题栏为什么没出现」
         this.output.appendLine(this.originals.length
             ? `[来源] ${this.sourceText} -> ${this.originals.map((r) => `${ojLabel(r.oj)} ${r.id}`).join(' / ')}`
             : (this.sourceText ? `[来源] ${this.sourceText} (未识别出原题站点)` : '[来源] 当前题目没有来源信息'));
         this.postOrigState();
+        void this.loadDifficulty();
+        // 来源无法解析出题号时(如比赛名 CSP-S2024), 尝试按题目标题检索洛谷原题
+        if (this.originals.length === 0) {
+            void this.searchOriginalByTitle();
+        }
+    }
+
+    // 用题目标题经洛谷检索定位原题: 命中则注入原题栏
+    private async searchOriginalByTitle(): Promise<void> {
+        // 优先用完整标题检索: 形如「[ CSP-S 2024 ] 决斗」的标题若去掉括号里的来源, 会退化成
+        // 通用词「决斗」而误命中「赌神:决斗」(P4978); 保留来源标记可让洛谷排到原题(P11231)
+        const full = this.sourceTitle.trim();
+        if (!full) {
+            return;
+        }
+        const exe = resolveJudgePath();
+        if (!exe) {
+            return;
+        }
+        const token = this.sourceText;
+        let hit = await this.lookupOriginal(full, exe);
+        if (this.sourceText !== token) {
+            return;
+        }
+        // 完整标题无果时, 去掉括号来源再回退检索(兼容「题目名(数据加强版)」之类)
+        const loose = cleanPiercedTitle(full);
+        if (!hit && loose && loose !== full) {
+            hit = await this.lookupOriginal(loose, exe);
+            if (this.sourceText !== token) {
+                return;
+            }
+        }
+        if (!hit) {
+            return;
+        }
+        this.originals = [luoguRef(hit.pid)];
+        this.output.appendLine(`[来源] 标题检索命中 ${hit.pid} ${hit.name}`);
+        this.postOrigState();
+        void this.loadDifficulty();
+    }
+
+    // 标题检索洛谷并挑最贴近的一条: 先名称全等, 再退而取包含关系
+    private async lookupOriginal(keyword: string, exe: string): Promise<{ pid: string; name: string } | undefined> {
+        const res = await searchLuoguFlow(keyword, exe, this.output);
+        if (!res.ok || !res.items || res.items.length === 0) {
+            return undefined;
+        }
+        const norm = (s: string): string => s.replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+        const target = norm(keyword);
+        if (!target) {
+            return undefined;
+        }
+        return res.items.find((it) => norm(it.name) === target)
+            ?? res.items.find((it) => norm(it.name).includes(target));
     }
 
     private postOrigState(): void {
@@ -1442,6 +1519,57 @@ export class PanelController implements vscode.WebviewViewProvider {
 
     private origHint(text: string, kind = ''): void {
         this.webview?.postMessage({ type: 'origHint', payload: { text, kind } });
+    }
+
+    // 当前题目的洛谷题号: 优先取原题栏的洛谷站点, 其次从题目链接解析
+    private luoguPid(): string {
+        const ref = this.originals.find((r) => r.oj === 'luogu');
+        if (ref && ref.id) {
+            return ref.id;
+        }
+        const url = this.preview.currentUrl() ?? '';
+        if (isLuoguUrl(url)) {
+            const m = /problem\/([^/?#]+)/i.exec(url);
+            if (m) {
+                return m[1];
+            }
+        }
+        return '';
+    }
+
+    // 自动获取题目难度: 非洛谷题/未登录/查询失败时清空徽标
+    private async loadDifficulty(): Promise<void> {
+        const pid = this.luoguPid();
+        const token = this.sourceText || this.preview.currentUrl() || '';
+        if (!pid) {
+            this.postDifficulty('', -1);
+            return;
+        }
+        const exe = resolveJudgePath();
+        if (!exe) {
+            return;
+        }
+        let data: DifficultySummary | undefined;
+        try {
+            data = await fetchDifficultyFlow(pid, exe, this.output);
+        } catch {
+            data = undefined;
+        }
+        if ((this.sourceText || this.preview.currentUrl() || '') !== token) {
+            return;
+        }
+        const text = data && data.ok && data.text ? data.text : '';
+        const level = data && data.ok && typeof data.difficulty === 'number' ? data.difficulty : -1;
+        this.postDifficulty(text, level);
+    }
+
+    private postDifficulty(text: string, level: number, force = false): void {
+        if (!force && text === this.difficultyText && level === this.difficultyLevel) {
+            return;
+        }
+        this.difficultyText = text;
+        this.difficultyLevel = level;
+        this.webview?.postMessage({ type: 'difficultyState', payload: { text, level } });
     }
 
     // 原题功能: 查看/预览/样例/复制链接/提交; index 为下拉框选中的站点
@@ -1472,6 +1600,10 @@ export class PanelController implements vscode.WebviewViewProvider {
             await this.submitOriginal(file, exe, pick);
             return;
         }
+        if (action === 'origSamplesAll') {
+            await this.importAllOriginalSamples(exe);
+            return;
+        }
         this.origHint('抓取原题中...');
         const summary = await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: '抓取原题中...', cancellable: false },
@@ -1498,6 +1630,44 @@ export class PanelController implements vscode.WebviewViewProvider {
             }
         });
         this.origHint(`已从 ${ojLabel(ref.oj)} 取得 ${samples.length} 个样例`, samples.length ? 't-success' : 't-error');
+    }
+
+    // 右键「原题样例」: 抓取所有原题站点的样例, 去重后一并导入为测试点
+    private async importAllOriginalSamples(exe: string): Promise<void> {
+        const all: { in: string; out: string }[] = [];
+        const seen = new Set<string>();
+        let sites = 0;
+        for (const ref of this.originals) {
+            this.origHint(`抓取 ${ojLabel(ref.oj)} 原题样例中...`);
+            const summary = await fetchOriginalFlow(ref.url, exe, this.output);
+            if (!summary.ok) {
+                this.output.appendLine(`[原题样例] ${ojLabel(ref.oj)} ${ref.id} 失败: ${summary.error ?? '未知错误'}`);
+                continue;
+            }
+            sites += 1;
+            let added = 0;
+            for (const s of summary.samples ?? []) {
+                const key = `${s.in ?? ''}\u0000${s.out ?? ''}`;
+                if (seen.has(key)) {
+                    continue;
+                }
+                seen.add(key);
+                all.push({ in: s.in ?? '', out: s.out ?? '' });
+                added += 1;
+            }
+            this.output.appendLine(`[原题样例] ${ojLabel(ref.oj)} ${ref.id}: 新增 ${added} 个样例`);
+        }
+        this.webview?.postMessage({
+            type: 'fetchResult',
+            payload: {
+                ok: true,
+                inline: true,
+                source: '原题样例',
+                name: `所有原题 (${sites} 个站点)`,
+                samples: all
+            }
+        });
+        this.origHint(`已合并 ${sites} 个原题的 ${all.length} 个样例`, all.length ? 't-success' : 't-error');
     }
 
     // 提交到原题: 选中的站点优先, 失败再按优先级换其他站点(仍失败则改用打开提交页+复制源码)

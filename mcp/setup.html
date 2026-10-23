@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OI Helper MCP 快速配置</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1f2328;
+            --muted: #656d76;
+            --border: #d0d7de;
+            --card: #f6f8fa;
+            --accent: #2f6feb;
+            --accent-fg: #ffffff;
+            --ok: #1a7f37;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d1117;
+                --fg: #e6edf3;
+                --muted: #8b949e;
+                --border: #30363d;
+                --card: #161b22;
+                --accent: #4b83f0;
+                --accent-fg: #ffffff;
+                --ok: #3fb950;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 32px 20px 64px;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .wrap { max-width: 880px; margin: 0 auto; }
+        h1 { font-size: 22px; margin: 0 0 6px; }
+        .sub { color: var(--muted); margin: 0 0 28px; }
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+        }
+        .step-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--accent-fg);
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+        }
+        label { display: block; font-size: 13px; margin-bottom: 4px; }
+        label .hint { color: var(--muted); font-weight: 400; }
+        input[type="text"], input[type="number"], input[type="password"], select {
+            width: 100%;
+            padding: 7px 10px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 13px;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+        input:last-child, select:last-child { margin-bottom: 0; }
+        .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tab {
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--fg);
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .tab:hover { border-color: var(--accent); }
+        .tab.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+        .tabs.out { margin-bottom: 12px; }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .filename {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .spacer { flex: 1; }
+        .btn {
+            padding: 5px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--fg);
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .btn:hover { border-color: var(--accent); }
+        .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+        pre {
+            margin: 0;
+            padding: 14px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .tip { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+        .tools { display: grid; gap: 10px; }
+        .tool {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 14px;
+        }
+        .tool code {
+            font-family: ui-monospace, Consolas, monospace;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .tool p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+        .note {
+            border-left: 3px solid var(--accent);
+            background: var(--card);
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .note b { color: var(--fg); font-weight: 600; }
+        .done { color: var(--ok); }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>OI Helper MCP 快速配置</h1>
+        <p class="sub">填写路径 → 选择客户端 → 复制配置. 无需手动拼 JSON.</p>
+
+        <div class="note">
+            <b>前置条件:</b> 已安装 Node.js, 且已构建 <code>core</code> 生成 <code>oi-judge</code>
+            (默认位于 <code>core/build/oi-judge</code>). MCP Server 会调用它完成评测.
+        </div>
+
+        <section class="step">
+            <div class="step-title"><span class="num">1</span>填写路径</div>
+            <label for="serverPath">server.js 绝对路径 <span class="hint" id="serverPathHint">(mcp/src/server.js)</span></label>
+            <input id="serverPath" type="text" placeholder="D:\path\to\OIHelpper\mcp\src\server.js">
+            <label for="nodePath">node 可执行文件 <span class="hint">(留空则用 PATH 中的 node)</span></label>
+            <input id="nodePath" type="text" placeholder="node">
+            <label for="judgePath">oi-judge 路径 <span class="hint">(可选, 留空则自动在 core/build/ 查找)</span></label>
+            <input id="judgePath" type="text" placeholder="D:\path\to\OIHelpper\core\build\oi-judge.exe">
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">2</span>评测默认</div>
+            <label for="env">环境 (env) <span class="hint">(留空则自动检测)</span></label>
+            <select id="env">
+                <option value="">(留空)</option>
+                <option value="auto">auto</option>
+                <option value="wsl">wsl</option>
+                <option value="mingw">mingw</option>
+            </select>
+            <label for="jobs">并行度 (jobs)</label>
+            <input id="jobs" type="number" placeholder="例如 4">
+            <label for="timeLimit">时限 ms (timeLimit)</label>
+            <input id="timeLimit" type="number" placeholder="例如 1000">
+            <label for="memoryLimit">内存 MB (memoryLimit)</label>
+            <input id="memoryLimit" type="number" placeholder="例如 256">
+            <label for="standard">C++ 标准 (standard)</label>
+            <select id="standard">
+                <option value="">(留空)</option>
+                <option value="c++11">c++11</option>
+                <option value="c++14">c++14</option>
+                <option value="c++17">c++17</option>
+                <option value="c++20">c++20</option>
+            </select>
+            <label for="optimize">优化 (optimize)</label>
+            <select id="optimize">
+                <option value="">(留空)</option>
+                <option value="O0">O0</option>
+                <option value="O1">O1</option>
+                <option value="O2">O2</option>
+            </select>
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">3</span>站点凭据</div>
+            <label for="xmojUser">xmoj 用户名</label>
+            <input id="xmojUser" type="text" placeholder="xmoj 用户名">
+            <label for="xmojPassword">xmoj 密码</label>
+            <input id="xmojPassword" type="password" placeholder="xmoj 密码">
+            <label for="luoguCookie">洛谷 Cookie</label>
+            <input id="luoguCookie" type="password" placeholder="__client_id=...">
+            <label for="codeforcesCookie">Codeforces Cookie</label>
+            <input id="codeforcesCookie" type="password" placeholder="Codeforces Cookie">
+            <label for="atcoderCookie">AtCoder Cookie</label>
+            <input id="atcoderCookie" type="password" placeholder="AtCoder Cookie">
+            <label for="hydroCookie">Hydro Cookie</label>
+            <input id="hydroCookie" type="password" placeholder="Hydro Cookie">
+            <label for="hydroBase">Hydro 站点地址</label>
+            <input id="hydroBase" type="text" placeholder="https://hydro.ac">
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">4</span>提交防护</div>
+            <label for="dedupSeconds">提交去重窗口 秒 <span class="hint">(同源码在该窗口内重复提交会被拦截; 留空默认 60, 填 0 关闭)</span></label>
+            <input id="dedupSeconds" type="number" placeholder="60">
+            <label for="submitIntervalMs">提交最小间隔 毫秒 <span class="hint">(两次提交之间强制间隔; 留空默认 1000, 填 0 只串行不限间隔)</span></label>
+            <input id="submitIntervalMs" type="number" placeholder="1000">
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">5</span>原题</div>
+            <label for="originalPriority">原题来源优先级</label>
+            <input id="originalPriority" type="text" placeholder="luogu,codeforces,atcoder,hydro">
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">6</span>选择客户端</div>
+            <div class="tabs" id="tabs">
+                <button class="tab active" data-client="trae">Trae / VS Code</button>
+                <button class="tab" data-client="claude">Claude Desktop</button>
+                <button class="tab" data-client="cursor">Cursor</button>
+                <button class="tab" data-client="generic">通用 JSON</button>
+            </div>
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">7</span>复制配置</div>
+            <div class="tabs out" id="outTabs">
+                <button class="tab active" data-out="mcp">MCP 配置</button>
+                <button class="tab" data-out="settings">插件设置</button>
+            </div>
+            <div class="toolbar">
+                <span class="filename" id="filename">mcp.json</span>
+                <span class="spacer"></span>
+                <button class="btn" id="download">下载文件</button>
+                <button class="btn primary" id="copy">复制</button>
+            </div>
+            <pre id="code"></pre>
+            <p class="tip" id="tip"></p>
+        </section>
+
+        <section class="step">
+            <div class="step-title"><span class="num">8</span>可用工具</div>
+            <div class="tools">
+                <div class="tool">
+                    <code>judge_problem</code>
+                    <p>评测整个题目目录 (读取 problem.json), 支持 env / jobs / timeLimit / memoryLimit / standard / optimize / checker / format / eps.</p>
+                </div>
+                <div class="tool">
+                    <code>judge_file</code>
+                    <p>评测单个源文件, 指定输入与期望输出.</p>
+                </div>
+                <div class="tool">
+                    <code>judge_version</code>
+                    <p>返回 oi-judge --version 的版本信息.</p>
+                </div>
+                <div class="tool">
+                    <code>fetch_problem</code>
+                    <p>抓取题目页 (xmoj/洛谷) 并生成题目目录.</p>
+                </div>
+                <div class="tool">
+                    <code>fetch_original</code>
+                    <p>抓取原题 (洛谷/CF/AtCoder/Hydro) 题面与样例.</p>
+                </div>
+                <div class="tool">
+                    <code>fetch_contest</code>
+                    <p>抓取竞赛题目 (/web/contest/{cid}/{num}).</p>
+                </div>
+                <div class="tool">
+                    <code>fetch_extra</code>
+                    <p>下载竞赛「更多样例」压缩包并解压.</p>
+                </div>
+                <div class="tool">
+                    <code>submit_solution</code>
+                    <p>提交源码到 xmoj (题目页 URL), 凭据取自环境变量.</p>
+                </div>
+                <div class="tool">
+                    <code>submit_original</code>
+                    <p>直连提交源码到原题 (洛谷/CF/AtCoder/Hydro); 遇图形验证码时回传图片与 cookie, 识别后带 captcha 重试.</p>
+                </div>
+                <div class="tool">
+                    <code>query_submission</code>
+                    <p>查询某个提交的评测结果 (xmoj/luogu/hydro).</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const CLIENTS = {
+            trae: {
+                file: 'mcp.json',
+                tip: 'Trae 的 MCP 配置文件, 或工作区下的 mcp.json. VS Code 原生 MCP 请把 mcpServers 改名为 servers, 并补上 "type": "stdio".'
+            },
+            claude: {
+                file: 'claude_desktop_config.json',
+                tip: 'Windows 路径: %APPDATA%\\Claude\\claude_desktop_config.json (macOS: ~/Library/Application Support/Claude/).'
+            },
+            cursor: {
+                file: 'mcp.json',
+                tip: '全局配置: ~/.cursor/mcp.json; 也可放在项目的 .cursor/mcp.json.'
+            },
+            generic: {
+                file: 'mcp.json',
+                tip: '标准 stdio MCP 配置, 可直接粘贴到任意支持 MCP 的客户端.'
+            }
+        };
+
+        const codeEl = document.getElementById('code');
+        const tipEl = document.getElementById('tip');
+        const fileEl = document.getElementById('filename');
+        const copyBtn = document.getElementById('copy');
+        const downloadBtn = document.getElementById('download');
+
+        let current = 'trae';
+        let out = 'mcp';
+
+        // 页面本身位于 mcp/ 下, 从自身位置推导 server.js 绝对路径
+        function detectServerPath() {
+            if (location.protocol !== 'file:') return '';
+            let p = decodeURIComponent(location.pathname);
+            if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1);
+            const idx = p.lastIndexOf('/');
+            if (idx < 0) return '';
+            const dir = p.slice(0, idx);
+            const sep = /^[A-Za-z]:/.test(dir) ? '\\' : '/';
+            return dir.split('/').join(sep) + sep + ['src', 'server.js'].join(sep);
+        }
+
+        function applyDetectedPath() {
+            const detected = detectServerPath();
+            if (!detected) return;
+            document.getElementById('serverPath').value = detected;
+            document.getElementById('serverPathHint').textContent = '(已自动定位, 如不对请修改)';
+        }
+
+        function val(id) {
+            return document.getElementById(id).value.trim();
+        }
+
+        function numVal(id) {
+            const v = val(id);
+            if (!v) return null;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function buildEnv() {
+            const env = {};
+            const judgePath = val('judgePath');
+            if (judgePath) env.OI_JUDGE_PATH = judgePath;
+            const mode = val('env');
+            if (mode) env.OI_JUDGE_ENV = mode;
+            const jobs = numVal('jobs');
+            if (jobs !== null) env.OI_JUDGE_JOBS = jobs;
+            const timeLimit = numVal('timeLimit');
+            if (timeLimit !== null) env.OI_JUDGE_TIME = timeLimit;
+            const memoryLimit = numVal('memoryLimit');
+            if (memoryLimit !== null) env.OI_JUDGE_MEMORY = memoryLimit;
+            const standard = val('standard');
+            if (standard) env.OI_JUDGE_STANDARD = standard;
+            const optimize = val('optimize');
+            if (optimize) env.OI_JUDGE_OPTIMIZE = optimize;
+            const xmojUser = val('xmojUser');
+            if (xmojUser) env.OI_XMOJ_USER = xmojUser;
+            const xmojPassword = val('xmojPassword');
+            if (xmojPassword) env.OI_XMOJ_PASS = xmojPassword;
+            const luoguCookie = val('luoguCookie');
+            if (luoguCookie) env.OI_LUOGU_COOKIE = luoguCookie;
+            const codeforcesCookie = val('codeforcesCookie');
+            if (codeforcesCookie) env.OI_CODEFORCES_COOKIE = codeforcesCookie;
+            const atcoderCookie = val('atcoderCookie');
+            if (atcoderCookie) env.OI_ATCODER_COOKIE = atcoderCookie;
+            const hydroCookie = val('hydroCookie');
+            if (hydroCookie) env.OI_HYDRO_COOKIE = hydroCookie;
+            const hydroBase = val('hydroBase');
+            if (hydroBase) env.OI_HYDRO_BASE = hydroBase;
+            const originalPriority = val('originalPriority');
+            if (originalPriority) env.OI_ORIGINAL_PRIORITY = originalPriority;
+            const dedupSeconds = numVal('dedupSeconds');
+            if (dedupSeconds !== null) env.OI_SUBMIT_DEDUP_SECONDS = dedupSeconds;
+            const submitIntervalMs = numVal('submitIntervalMs');
+            if (submitIntervalMs !== null) env.OI_SUBMIT_INTERVAL_MS = submitIntervalMs;
+            return env;
+        }
+
+        function buildServer() {
+            const serverPath = val('serverPath') || 'D:\\path\\to\\OIHelpper\\mcp\\src\\server.js';
+            const cfg = {
+                command: val('nodePath') || 'node',
+                args: [serverPath]
+            };
+            const env = buildEnv();
+            if (Object.keys(env).length) {
+                cfg.env = env;
+            }
+            return cfg;
+        }
+
+        function buildMcp() {
+            return { mcpServers: { 'oi-helper': buildServer() } };
+        }
+
+        function buildSettings() {
+            const s = {};
+            const judgePath = val('judgePath');
+            if (judgePath) s['oiHelper.judgePath'] = judgePath;
+            const mode = val('env');
+            if (mode) s['oiHelper.env'] = mode;
+            const jobs = numVal('jobs');
+            if (jobs !== null) s['oiHelper.jobs'] = jobs;
+            const timeLimit = numVal('timeLimit');
+            if (timeLimit !== null) s['oiHelper.timeLimit'] = timeLimit;
+            const memoryLimit = numVal('memoryLimit');
+            if (memoryLimit !== null) s['oiHelper.memoryLimit'] = memoryLimit;
+            const standard = val('standard');
+            if (standard) s['oiHelper.standard'] = standard;
+            const xmojUser = val('xmojUser');
+            if (xmojUser) s['oiHelper.xmojUser'] = xmojUser;
+            const xmojPassword = val('xmojPassword');
+            if (xmojPassword) s['oiHelper.xmojPassword'] = xmojPassword;
+            const luoguCookie = val('luoguCookie');
+            if (luoguCookie) s['oiHelper.luoguCookie'] = luoguCookie;
+            const codeforcesCookie = val('codeforcesCookie');
+            if (codeforcesCookie) s['oiHelper.codeforcesCookie'] = codeforcesCookie;
+            const atcoderCookie = val('atcoderCookie');
+            if (atcoderCookie) s['oiHelper.atcoderCookie'] = atcoderCookie;
+            const hydroCookie = val('hydroCookie');
+            if (hydroCookie) s['oiHelper.hydroCookie'] = hydroCookie;
+            const hydroBase = val('hydroBase');
+            if (hydroBase) s['oiHelper.hydroBase'] = hydroBase;
+            const originalPriority = val('originalPriority');
+            if (originalPriority) s['oiHelper.originalPriority'] = originalPriority;
+            return s;
+        }
+
+        function currentFile() {
+            return out === 'settings' ? 'settings.json' : CLIENTS[current].file;
+        }
+
+        function render() {
+            if (out === 'settings') {
+                codeEl.textContent = JSON.stringify(buildSettings(), null, 4);
+                tipEl.textContent = '插件设置: 粘贴到 VSCode 用户或工作区 settings.json (命令面板 → 首选项: 打开设置(JSON)).';
+            } else {
+                codeEl.textContent = JSON.stringify(buildMcp(), null, 4);
+                tipEl.textContent = CLIENTS[current].tip;
+            }
+            fileEl.textContent = currentFile();
+        }
+
+        function flash(text) {
+            const old = copyBtn.textContent;
+            copyBtn.textContent = text;
+            copyBtn.classList.add('done');
+            setTimeout(() => {
+                copyBtn.textContent = old;
+                copyBtn.classList.remove('done');
+            }, 1500);
+        }
+
+        document.getElementById('tabs').addEventListener('click', (e) => {
+            const btn = e.target.closest('.tab');
+            if (!btn) return;
+            current = btn.dataset.client;
+            document.querySelectorAll('#tabs .tab').forEach((t) => t.classList.toggle('active', t === btn));
+            render();
+        });
+
+        document.getElementById('outTabs').addEventListener('click', (e) => {
+            const btn = e.target.closest('.tab');
+            if (!btn) return;
+            out = btn.dataset.out;
+            document.querySelectorAll('#outTabs .tab').forEach((t) => t.classList.toggle('active', t === btn));
+            render();
+        });
+
+        [
+            'serverPath', 'nodePath', 'judgePath',
+            'env', 'jobs', 'timeLimit', 'memoryLimit', 'standard', 'optimize',
+            'xmojUser', 'xmojPassword', 'luoguCookie', 'codeforcesCookie',
+            'atcoderCookie', 'hydroCookie', 'hydroBase', 'originalPriority', 'dedupSeconds', 'submitIntervalMs'
+        ].forEach((id) => {
+            const el = document.getElementById(id);
+            el.addEventListener('input', render);
+            el.addEventListener('change', render);
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            const text = codeEl.textContent;
+            try {
+                await navigator.clipboard.writeText(text);
+                flash('已复制');
+            } catch (err) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                flash('已复制');
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const blob = new Blob([codeEl.textContent], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFile();
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        applyDetectedPath();
+        render();
+    </script>
+</body>
+</html>

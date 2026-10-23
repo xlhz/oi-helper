@@ -349,6 +349,14 @@ std::wstring toWide(const std::string& s) {
     return w;
 }
 
+std::string toNarrow(const std::wstring& w) {
+    if (w.empty()) return std::string();
+    int n = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), static_cast<int>(w.size()), nullptr, 0, nullptr, nullptr);
+    std::string s(static_cast<size_t>(n), 0);
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), static_cast<int>(w.size()), &s[0], n, nullptr, nullptr);
+    return s;
+}
+
 std::string urlEncode(const std::string& s) {
     static const char* kHex = "0123456789ABCDEF";
     std::string out;
@@ -512,7 +520,8 @@ public:
 
     bool request(const std::string& method, const std::string& url, const std::string& body,
                  const std::string& contentType, std::string& resp, std::string& err,
-                 const std::string& headers = "") {
+                 const std::string& headers = "", bool followRedirect = true,
+                 std::string* setCookieOut = nullptr) {
         resp.clear();
         std::wstring wurl = toWide(url);
         URL_COMPONENTS uc;
@@ -547,7 +556,8 @@ public:
             err = "创建请求失败: " + url;
             return false;
         }
-        DWORD policy = WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS;
+        DWORD policy = followRedirect ? WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS
+                                      : WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
         WinHttpSetOption(req, WINHTTP_OPTION_REDIRECT_POLICY, &policy, sizeof(policy));
 
         BOOL sent = FALSE;
@@ -584,6 +594,21 @@ public:
         WinHttpQueryHeaders(req, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
                             WINHTTP_HEADER_NAME_BY_INDEX, &st, &slen, WINHTTP_NO_HEADER_INDEX);
         status_ = st;
+
+        if (setCookieOut) {
+            setCookieOut->clear();
+            DWORD clen = 0;
+            WinHttpQueryHeaders(req, WINHTTP_QUERY_SET_COOKIE, WINHTTP_HEADER_NAME_BY_INDEX,
+                                NULL, &clen, WINHTTP_NO_HEADER_INDEX);
+            if (clen > 0) {
+                std::wstring w(clen / sizeof(wchar_t), L'\0');
+                if (WinHttpQueryHeaders(req, WINHTTP_QUERY_SET_COOKIE, WINHTTP_HEADER_NAME_BY_INDEX,
+                                        &w[0], &clen, WINHTTP_NO_HEADER_INDEX)) {
+                    w.resize(w.find(L'\0'));
+                    *setCookieOut = toNarrow(w);
+                }
+            }
+        }
 
         std::string data;
         DWORD avail = 0;
@@ -671,24 +696,47 @@ std::string sessionEndFromClass(HttpClient& http, const std::string& classId,
 FetchResult fetchLuogu(HttpClient& http, const FetchOptions& opt, const std::string& pid) {
     FetchResult r;
     r.url = opt.url;
-    std::string headers =
+    // 团队/比赛题目需带 contestId 才能访问, 原样保留 URL 查询串
+    std::string query;
+    size_t q = opt.url.find('?');
+    if (q != std::string::npos) query = opt.url.substr(q);
+    std::string reqUrl = "https://www.luogu.com.cn/problem/" + pid + query;
+    std::string baseHeaders =
         "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
         "like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
         "Accept: application/json, text/plain, */*\r\n"
         "X-Requested-With: XMLHttpRequest\r\n"
         "x-lentille-request: content-only\r\n"
-        "Referer: https://www.luogu.com.cn/problem/" + pid + "\r\n";
-    if (!opt.cookie.empty()) headers += "Cookie: " + opt.cookie + "\r\n";
+        "Referer: https://www.luogu.com.cn/problem/" + pid + query + "\r\n";
+    auto makeHeaders = [&baseHeaders](const std::string& ck) {
+        return ck.empty() ? baseHeaders : baseHeaders + "Cookie: " + ck + "\r\n";
+    };
 
     std::string body;
     std::string err;
-    if (!http.request("GET", "https://www.luogu.com.cn/problem/" + pid, "", "", body, err,
-                      headers)) {
+    std::string cookie = opt.cookie;
+    std::string setCookie;
+    if (!http.request("GET", reqUrl, "", "", body, err, makeHeaders(cookie), false, &setCookie)) {
         r.error = err;
         return r;
     }
+    // 洛谷风控可能下发 C3VK 挑战 cookie, 带 cookie 重试一次
+    if (http.status() != 200 && !setCookie.empty()) {
+        std::string kv = setCookie.substr(0, setCookie.find(';'));
+        cookie = cookie.empty() ? kv : cookie + "; " + kv;
+        body.clear();
+        if (!http.request("GET", reqUrl, "", "", body, err, makeHeaders(cookie))) {
+            r.error = err;
+            return r;
+        }
+    }
     if (http.status() != 200) {
-        r.error = "抓取洛谷题目失败: HTTP " + std::to_string(http.status());
+        if (http.status() == 401 || http.status() == 403) {
+            r.error = "抓取洛谷题目失败: HTTP " + std::to_string(http.status()) +
+                      " (题目可能仅团队/比赛可见, 需配置 oiHelper.luoguCookie 且账号有权限)";
+        } else {
+            r.error = "抓取洛谷题目失败: HTTP " + std::to_string(http.status());
+        }
         return r;
     }
     Json root;
@@ -782,6 +830,117 @@ FetchResult fetchLuogu(HttpClient& http, const FetchOptions& opt, const std::str
     return r;
 }
 
+// 洛谷难度等级(0..7)中文名
+static std::string difficultyName(int d) {
+    static const char* kNames[] = {"暂无评定",   "入门",       "普及-",      "普及/提高-",
+                                   "普及+/提高", "提高+/省选-", "省选/NOI-", "NOI/NOI+/CTSC"};
+    if (d < 0 || d > 7) return "";
+    return kNames[d];
+}
+
+// 查询洛谷题目难度: 复用 content-only 接口, 读取 data.problem.difficulty
+DifficultyResult fetchLuoguDifficultyWin(const std::string& pid, const std::string& cookie) {
+    DifficultyResult r;
+    r.pid = pid;
+    HttpClient http;
+    if (!http.ok()) {
+        r.error = "无法初始化网络库";
+        return r;
+    }
+    std::string headers =
+        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
+        "like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+        "Accept: application/json, text/plain, */*\r\n"
+        "X-Requested-With: XMLHttpRequest\r\n"
+        "x-lentille-request: content-only\r\n"
+        "Referer: https://www.luogu.com.cn/problem/" + pid + "\r\n";
+    if (!cookie.empty()) headers += "Cookie: " + cookie + "\r\n";
+
+    std::string body;
+    std::string err;
+    if (!http.request("GET", "https://www.luogu.com.cn/problem/" + pid, "", "", body, err, headers)) {
+        r.error = err;
+        return r;
+    }
+    if (http.status() != 200) {
+        r.error = "查询难度失败: HTTP " + std::to_string(http.status());
+        return r;
+    }
+    Json root;
+    std::string perr;
+    if (!Json::parse(body, root, perr)) {
+        r.error = "洛谷响应解析失败: " + perr;
+        return r;
+    }
+    const Json& prob = root["data"]["problem"];
+    if (!prob.contains("pid")) {
+        r.error = "洛谷未返回题目, 可能需配置 oiHelper.luoguCookie";
+        return r;
+    }
+    r.ok = true;
+    r.difficulty = static_cast<int>(prob["difficulty"].getInt(-1));
+    r.text = difficultyName(r.difficulty);
+    return r;
+}
+
+// 按关键词检索洛谷题目: GET /problem/list?keyword=..., 取前若干条
+LuoguSearchResult searchLuoguWin(const std::string& keyword, const std::string& cookie) {
+    LuoguSearchResult r;
+    HttpClient http;
+    if (!http.ok()) {
+        r.error = "无法初始化网络库";
+        return r;
+    }
+    std::string headers =
+        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
+        "like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+        "Accept: application/json, text/plain, */*\r\n"
+        "X-Requested-With: XMLHttpRequest\r\n"
+        "x-lentille-request: content-only\r\n"
+        "Referer: https://www.luogu.com.cn/problem/list\r\n";
+    if (!cookie.empty()) headers += "Cookie: " + cookie + "\r\n";
+
+    std::string url =
+        "https://www.luogu.com.cn/problem/list?type=P&_contentOnly=1&keyword=" + urlEncode(keyword);
+    std::string body;
+    std::string err;
+    std::string setCookie;
+    // 首次不跟随重定向: 洛谷风控会下发 C3VK 挑战 cookie, 需带 cookie 重新请求
+    if (!http.request("GET", url, "", "", body, err, headers, false, &setCookie)) {
+        r.error = err;
+        return r;
+    }
+    if (http.status() != 200 && !setCookie.empty()) {
+        std::string kv = setCookie.substr(0, setCookie.find(';'));
+        headers += "Cookie: " + kv + "\r\n";
+        body.clear();
+        if (!http.request("GET", url, "", "", body, err, headers)) {
+            r.error = err;
+            return r;
+        }
+    }
+    if (http.status() != 200) {
+        r.error = "洛谷检索失败: HTTP " + std::to_string(http.status());
+        return r;
+    }
+    Json root;
+    std::string perr;
+    if (!Json::parse(body, root, perr)) {
+        r.error = "洛谷响应解析失败: " + perr;
+        return r;
+    }
+    const Json& arr = root["data"]["problems"]["result"];
+    r.ok = true;
+    for (size_t i = 0; i < arr.size() && i < 10; ++i) {
+        const Json& it = arr.at(i);
+        LuoguSearchItem item;
+        item.pid = it["pid"].getString();
+        item.name = it["name"].getString();
+        if (!item.pid.empty()) r.items.push_back(item);
+    }
+    return r;
+}
+
 // 抓取新版竞赛题目: GET /api/contest/{cid}/{num}?lang=cn, 原样回传 HTML 字段
 ContestResult fetchContest(HttpClient& http, const std::string& cid, const std::string& num) {
     ContestResult r;
@@ -822,6 +981,13 @@ ContestResult fetchContest(HttpClient& http, const std::string& cid, const std::
     p.startTime = ct["startTime"].getString();
     p.endTime = ct["endTime"].getString();
     p.classId = ct["classId"].getString();
+    // rule 1/2(含补题): onsiteEndTime 为比赛结束, endTime 为补题截止; 倒计时应按比赛结束
+    int rule = static_cast<int>(ct["rule"].getInt(0));
+    std::string onsiteEnd = ct["onsiteEndTime"].getString();
+    if ((rule == 1 || rule == 2) && !onsiteEnd.empty()) {
+        p.correctionEnd = p.endTime;
+        p.endTime = onsiteEnd;
+    }
     // 非固定时间比赛: 以个人时间线为准
     const Json& tl = ct["myTimeline"];
     if (tl["enabled"].getBool(false) && !tl["endTime"].getString().empty()) {
@@ -2134,6 +2300,29 @@ OriginalSubmitResult submitOriginalWin(const OriginalSubmitOptions& opt) {
 
 }  // namespace
 
+// 查询洛谷题目难度(pid 形如 P1403); cookie 为洛谷登录 Cookie(可空)
+DifficultyResult fetchLuoguDifficulty(const std::string& pid, const std::string& cookie) {
+#ifdef _WIN32
+    return fetchLuoguDifficultyWin(pid, cookie);
+#else
+    DifficultyResult r;
+    r.pid = pid;
+    r.error = "该功能仅在 Windows 下可用";
+    return r;
+#endif
+}
+
+// 按关键词检索洛谷题目(竞赛题 source 非题号时用于定位原题)
+LuoguSearchResult searchLuogu(const std::string& keyword, const std::string& cookie) {
+#ifdef _WIN32
+    return searchLuoguWin(keyword, cookie);
+#else
+    LuoguSearchResult r;
+    r.error = "该功能仅在 Windows 下可用";
+    return r;
+#endif
+}
+
 // 查询洛谷提交结果(记录页内容接口); 需登录 Cookie
 SolutionResult fetchSolutionResultLuogu(long long rid, const std::string& cookie) {
 #ifdef _WIN32
@@ -2483,6 +2672,35 @@ ContestResult fetchContestProblem(const FetchOptions& opt) {
 #endif
 }
 
+#ifdef _WIN32
+// 运行外部命令(如 tar)并等待结束: 禁用句柄继承, 避免子进程持有宿主 stdout/stderr 管道,
+// 否则 Node spawn 出的子进程会因管道写端未关闭而永远等不到 EOF(表现为挂起/异常退出码)
+static bool runHidden(const std::string& cmdline, std::string& err) {
+    std::wstring w = toWide(cmdline);
+    std::vector<wchar_t> buf(w.begin(), w.end());
+    buf.push_back(L'\0');
+    STARTUPINFOW si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    if (!CreateProcessW(NULL, buf.data(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        err = "无法启动解压进程(错误码 " + std::to_string(GetLastError()) + ")";
+        return false;
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD code = 1;
+    GetExitCodeProcess(pi.hProcess, &code);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    if (code != 0) {
+        err = "解压失败(退出码 " + std::to_string(code) + ")";
+        return false;
+    }
+    return true;
+}
+#endif
+
 ExtraResult fetchExtraSamples(const std::string& url, const std::string& outDir, const FetchOptions& opt) {
     ExtraResult r;
     r.dir = outDir;
@@ -2532,8 +2750,9 @@ ExtraResult fetchExtraSamples(const std::string& url, const std::string& outDir,
         return r;
     }
     std::string cmd = "tar -xf \"" + archive.string() + "\" -C \"" + outDir + "\"";
-    if (std::system(cmd.c_str()) != 0) {
-        r.error = "解压失败: " + archive.string();
+    std::string terr;
+    if (!runHidden(cmd, terr)) {
+        r.error = terr;
         return r;
     }
     fs::remove(archive, ec);

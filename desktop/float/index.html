@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+    <title>OI Helper 悬浮窗</title>
+    <link rel="stylesheet" href="float.css">
+</head>
+<body>
+    <div class="float">
+        <header class="bar">
+            <div class="bar-title">
+                <span class="dot"></span>
+                <span id="problem-title">未选择题目</span>
+            </div>
+            <div class="bar-actions">
+                <button id="btn-minimize" title="最小化">—</button>
+                <button id="btn-close" title="关闭悬浮窗">×</button>
+            </div>
+        </header>
+
+        <div class="toolbar">
+            <button id="btn-pick" class="ghost">选择题目</button>
+            <button id="btn-open" class="ghost">打开题目</button>
+            <button id="btn-judge" class="primary">一键评测</button>
+        </div>
+
+        <div class="meta" id="meta">选择 problems 下的题目目录后开始.</div>
+
+        <section class="card tests">
+            <div class="card-head">
+                <h3>测试点</h3>
+                <label class="check-all">
+                    <input type="checkbox" id="check-all">
+                    <span>全选</span>
+                </label>
+            </div>
+            <ul id="test-list" class="test-list"></ul>
+            <div class="empty" id="test-empty">暂无测试点.</div>
+        </section>
+
+        <section class="card result">
+            <div class="card-head">
+                <h3>评测结果</h3>
+                <span class="chip idle" id="result-chip">未评测</span>
+            </div>
+            <div class="result-summary" id="result-summary">点击「一键评测」运行全部测试点.</div>
+            <div class="result-tests" id="result-tests"></div>
+        </section>
+
+        <section class="card last">
+            <div class="card-head">
+                <h3>最近提交</h3>
+                <span class="hint" id="last-time"></span>
+            </div>
+            <div class="result-summary" id="last-summary">暂无记录.</div>
+            <div class="result-tests" id="result-tests-last"></div>
+        </section>
+
+        <div class="statusline" id="statusline"></div>
+    </div>
+    <script src="float.js"></script>
+</body>
+</html>

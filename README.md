@@ -138,7 +138,7 @@ core/build/oi-judge.exe --src problems/ICPC1/A/a.cpp --in problems/ICPC1/A/1.in 
 
 ## VSCode 插件
 
-安装：扩展面板选择 `extension/oi-helper-0.0.1.vsix` 安装，或按 F5 以开发模式运行。
+安装：扩展面板选择 `extension/oi-helper-0.1.0-pre.vsix`（或 `installer/build-vsix.ps1` 生成的 `oi-helper-0.1.0.vsix`）安装，或按 F5 以开发模式运行。
 
 使用：
 
@@ -186,13 +186,47 @@ core/build/oi-judge.exe --src problems/ICPC1/A/a.cpp --in problems/ICPC1/A/1.in 
 cd mcp; npm install; npm start
 ```
 
+也可用 `mcp/setup.html` 可视化生成配置：一次填写, 同时生成 MCP 配置与插件设置片段。
+
 stdio 暴露工具：
 
-- `judge_problem`：`{ problemDir（必填）, env?, jobs?, timeLimit?, memoryLimit? }`
-- `judge_file`：`{ src（必填）, input（必填）, expected（必填）, timeLimit?, memoryLimit?, env? }`
+- `judge_problem`：`{ problemDir（必填）, env?, jobs?, timeLimit?, memoryLimit?, standard?, optimize?, checker?, format?, eps? }`
+- `judge_file`：`{ src（必填）, input（必填）, expected（必填）, timeLimit?, memoryLimit?, env?, standard?, optimize?, checker?, eps? }`
 - `judge_version`：无参数
+- `fetch_problem`：`{ url（必填）, outDir?, inline? }`
+- `fetch_original`：`{ url（必填） }`
+- `fetch_contest`：`{ url（必填） }`
+- `fetch_extra`：`{ url（必填）, outDir? }`
+- `submit_solution`：`{ url（必填）, file（必填）, lang? }`
+- `submit_original`：`{ url（必填）, file（必填）, lang?, captcha? }`
+- `query_submission`：`{ id（必填）, oj?, problemUrl? }`
 
-可通过环境变量 `OI_JUDGE_PATH` 指定 `oi-judge` 路径。
+提交/抓取类工具的账号与 Cookie 不在参数中, 统一通过环境变量提供(见下表)。
+
+| 变量 | 说明 |
+|---|---|
+| `OI_JUDGE_PATH` | `oi-judge` 可执行文件路径 |
+| `OI_JUDGE_ENV` | 默认评测环境 `auto/wsl/mingw` |
+| `OI_JUDGE_JOBS` | 默认并行度 |
+| `OI_JUDGE_TIME` | 默认时限 (ms) |
+| `OI_JUDGE_MEMORY` | 默认内存限制 (MB) |
+| `OI_JUDGE_STANDARD` | 默认 C++ 标准 |
+| `OI_JUDGE_OPTIMIZE` | 默认优化级别 |
+| `OI_XMOJ_USER` / `OI_XMOJ_PASS` | xmoj 账号密码 |
+| `OI_LUOGU_COOKIE` / `OI_CODEFORCES_COOKIE` / `OI_ATCODER_COOKIE` / `OI_HYDRO_COOKIE` | 各站点 Cookie |
+| `OI_HYDRO_BASE` | Hydro 站点地址 |
+| `OI_ORIGINAL_PRIORITY` | 原题来源优先级 |
+| `OI_FETCH_OUT` | 抓取默认输出基础目录 |
+| `OI_SUBMIT_DEDUP_SECONDS` | 提交去重窗口(秒), 默认 60; 设为 0 关闭 |
+| `OI_SUBMIT_INTERVAL_MS` | 提交最小间隔(毫秒), 默认 1000; 设为 0 只串行不限间隔 |
+
+工具参数优先于环境变量; 站点 Cookie 按 URL 主机自动选择(洛谷/CF/AtCoder, 其余回退 Hydro)。
+
+提交防护: 所有提交串行执行, 且两次提交之间强制最小间隔(默认 1 秒), 避免并发或连续重复提交; 并对同一份源码(按 工具+URL+语言+源码内容 判定)在去重窗口内只放行一次, 重复调用返回「[重复提交已拦截]」并提示改用 `query_submission` 轮询。
+
+`OI_SUBMIT_DEDUP_SECONDS` / `OI_SUBMIT_INTERVAL_MS` 对核心 CLI 的 `--submit` / `--submit-original` 同样生效(跨进程、落盘): 无论从 MCP、VSCode 扩展还是终端直接调用, 同一份源码都不会被重复提交, 且两次提交至少间隔 1 秒。
+
+图形验证码: `submit_original` 提交洛谷时若需要验证码, 会返回说明文本与验证码图片(image 内容块), 并给出本次会话 `cookie`; 识别后带上 `captcha` 与该 `cookie` 重新调用即可完成提交 (验证码答案与 cookie 绑定, 必须沿用同一 cookie)。验证码输入有误时, 再次不带 `captcha` 调用可获取新图; 查询洛谷/Hydro 结果时也可用 `cookie` 沿用提交会话。
 
 ## REST API
 
@@ -228,6 +262,22 @@ core/build/oi-judge.exe --serve 8899
 - 默认 `--env auto`（以及不传 `--env`）会优先探测 WSL + isolate，该探测有 3 秒超时上限；探测超时（例如本机 `wsl.exe` 无响应）或失败时回退到 MinGW + Windows Job Object 运行，这是正常回退，结果里 `isolationDegraded` 仍为 `false`；只有显式指定 `--env wsl` 而 WSL 不可用时才算降级，此时 `isolationDegraded` 为 `true`；由于探测需等满超时，默认路径比 `--env mingw` 慢约 3 秒，想跳过探测可直接指定 `--env mingw`。
 - Windows 上 MinGW 程序冷启动 wall 约 1s，故 wall 等待 = 时限 + 3000ms 宽限，超时以 CPU 时间判定并容忍 200ms 启动开销。
 - 通信题为简化实现，仅支持 2 个源文件。
+
+## 目录说明
+
+- `core/`: C++ 评测内核, 提供 `oi-judge` 命令行与 `POST /judge`.
+- `extension/`: VS Code/Trae 扩展, 提供评测面板、题目抓取与比赛功能.
+- `mcp/`: Node 实现的 MCP Server, 通过 stdio 暴露评测与抓取工具.
+- `desktop/`: Electron 管理程序骨架, 统一管理服务器、凭据与工作区.
+- `browser/`: MV3 浏览器扩展, 承载 OJ 页面采集、一键 Cookie 与在线 IDE 侧边面板.
+- `installer/`: 打包与安装脚本, 生成扩展 vsix 并部署桌面程序.
+
+## V0.1.0-100 发布说明
+
+- 版本: `extension` / `mcp` / `desktop` / `browser` 均为 `0.1.0`, 对外版本 `V0.1.0-100`, 内核 `GET /health` 同步返回该版本与构建号 `100`.
+- 新增: `desktop` 管理程序 (服务器/凭据/识别到的OIH/接口/工作区/设置、局域网聊天、比赛通知、置顶悬浮窗), `browser` MV3 采集扩展与在线 IDE 面板, `installer` 安装脚本, 扩展侧 5 个编辑器辅助命令, 内核 `GET /health`.
+- 安装: 桌面程序用 `desktop/dist/OI-Helper-0.1.0-setup.exe` (安装时自动探测并部署扩展); 扩展也可用 `extension/oi-helper-0.1.0.vsix` 或 `installer/build-vsix.ps1`; 浏览器扩展加载 `browser/` 或解压 `browser-0.1.0.zip`.
+- 已知限制: 仅装 VS Code 的机器上的一键安装未验证 (本机仅有 Trae CN); Codeforces / AtCoder 的登录态提交未验证; 榜单事件提醒未在真实比赛中触发. 详见 [docs/desktop-manager-open-issues.md](docs/desktop-manager-open-issues.md).
 
 ## 许可证
 

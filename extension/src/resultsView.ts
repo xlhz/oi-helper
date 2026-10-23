@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { JudgeResult } from './judge';
 
 function createNonce(): string {
@@ -36,14 +37,39 @@ export class ResultsView implements vscode.WebviewViewProvider {
         this.view = view;
         view.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
         view.webview.html = this.html();
-        view.webview.onDidReceiveMessage((message: { type?: string }) => {
+        view.webview.onDidReceiveMessage((message: { type?: string; file?: string; line?: number }) => {
             if (message && message.type === 'ready') {
                 this.post();
+            } else if (message && message.type === 'openFile' && message.file) {
+                void this.openInEditor(message.file, message.line || 0);
+            } else if (message && message.type === 'reset') {
+                this.reset();
             }
         });
         view.onDidDispose(() => {
             this.view = undefined;
         });
+    }
+
+    // 编译报错跳转: 打开报错引用的源文件并定位到对应行
+    private async openInEditor(file: string, line: number): Promise<void> {
+        let target = file;
+        if (!path.isAbsolute(target)) {
+            const folders = vscode.workspace.workspaceFolders;
+            if (folders && folders.length > 0) {
+                target = path.join(folders[0].uri.fsPath, target);
+            }
+        }
+        try {
+            const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(target));
+            const editor = await vscode.window.showTextDocument(doc, { preview: true });
+            const row = Math.max(0, Math.min(line - 1, Math.max(0, doc.lineCount - 1)));
+            const pos = new vscode.Position(row, 0);
+            editor.selection = new vscode.Selection(pos, pos);
+            editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        } catch {
+            vscode.window.showWarningMessage('无法打开源文件: ' + target);
+        }
     }
 
     // 评测激活/结束: 结果视图在等待态与结果态之间切换
@@ -67,6 +93,14 @@ export class ResultsView implements vscode.WebviewViewProvider {
     // 最近一次评测结果, 供提交前判断是否 AC
     lastResult(): JudgeResult | undefined {
         return this.last;
+    }
+
+    // 重置: 清空评测与提交结果, 回到空态
+    reset(): void {
+        this.running = false;
+        this.last = undefined;
+        this.submit = undefined;
+        this.post();
     }
 
     refresh(): void {
@@ -99,6 +133,8 @@ export class ResultsView implements vscode.WebviewViewProvider {
         color: var(--vscode-foreground);
     }
     .tnum { font-variant-numeric: tabular-nums; }
+    .topbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .topbar[hidden] { display: none; }
     .empty {
         display: flex;
         flex-direction: column;
@@ -205,14 +241,44 @@ export class ResultsView implements vscode.WebviewViewProvider {
         word-break: break-all;
     }
     .fail {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--vscode-panel-border);
         font-size: 11.5px;
         line-height: 1.5;
         color: var(--vscode-descriptionForeground);
     }
-    .fid { font-family: var(--vscode-editor-font-family); color: var(--vscode-testing-iconFailed); white-space: nowrap; }
+    .fail:last-child { border-bottom: none; }
+    .fail-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; cursor: pointer; }
+    .fail-head .caret { width: 8px; color: var(--vscode-descriptionForeground); }
+    .fail-head .txt { flex: 1 1 auto; min-width: 0; word-break: break-all; }
+    .fail-body {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px 0 2px 16px;
+    }
+    .fail-body[hidden] { display: none; }
+    .cmp { display: flex; flex-direction: column; gap: 2px; font-family: var(--vscode-editor-font-family); font-size: 11.5px; }
+    .c-line { display: flex; gap: 8px; white-space: pre-wrap; word-break: break-all; }
+    .c-line .tag { flex: 0 0 auto; color: var(--vscode-descriptionForeground); }
+    .c-line .hl { border-radius: 3px; padding: 0 3px; background: var(--vscode-diffEditor-removedTextBackground); }
+    .btn {
+        align-self: flex-start;
+        padding: 3px 8px;
+        border: 1px solid var(--vscode-panel-border);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--vscode-foreground);
+        cursor: pointer;
+        font-size: 11px;
+    }
+    .btn:hover { background: var(--vscode-toolbar-hoverBackground); }
+    .full { max-height: 240px; overflow: auto; }
+    .full[hidden] { display: none; }
+    .lnk { color: var(--vscode-textLink-foreground); cursor: pointer; text-decoration: underline; }
     .mono {
         padding: 8px 10px;
         border-radius: 6px;
@@ -226,6 +292,9 @@ export class ResultsView implements vscode.WebviewViewProvider {
 </style>
 </head>
 <body>
+    <div class="topbar" id="topbar" hidden>
+        <button class="btn" id="reset" title="清除评测与提交结果">重置</button>
+    </div>
     <div class="empty" id="empty">
         <span>暂无评测结果</span>
     </div>
@@ -340,21 +409,63 @@ export class ResultsView implements vscode.WebviewViewProvider {
         }).join('');
     }
 
+    // 失败点详情: RE 展示 stderr; WA 展示首个不同行对比并可展开完整实际输出
+    function failDetail(t) {
+        const parts = [];
+        if (t.status === 'RE' && t.stderr) {
+            parts.push('<div class="mono">' + escapeHtml(t.stderr) + '</div>');
+        }
+        const actual = String(t.actual === undefined || t.actual === null ? '' : t.actual);
+        const expected = String(t.expected === undefined || t.expected === null ? '' : t.expected);
+        if (t.status === 'WA' && (actual || expected)) {
+            const line = t.diffLine || 0;
+            let rows = '';
+            if (line > 0) {
+                const el = expected.split('\\n')[line - 1];
+                const al = actual.split('\\n')[line - 1];
+                rows += '<div class="c-line"><span class="tag">期望</span><span class="hl">'
+                    + escapeHtml(el === undefined ? '(缺行)' : el) + '</span></div>';
+                rows += '<div class="c-line"><span class="tag">实际</span><span class="hl">'
+                    + escapeHtml(al === undefined ? '(缺行)' : al) + '</span></div>';
+            }
+            parts.push('<div class="cmp">' + rows + '</div>');
+            parts.push('<button class="btn more">展开完整实际输出</button>');
+            parts.push('<div class="mono full" hidden>' + escapeHtml(actual || '(无输出)') + '</div>');
+        }
+        if (!parts.length) {
+            parts.push('<div class="mono">' + escapeHtml(t.message || '无附加信息') + '</div>');
+        }
+        return parts.join('');
+    }
+
     function renderFails(result) {
         const list = document.getElementById('fails');
         const block = document.getElementById('fail-block');
         const fails = (result.tests || []).filter(function (t) { return t.status !== 'AC'; });
         block.style.display = fails.length ? '' : 'none';
         list.innerHTML = fails.map(function (t) {
-            return '<div class="fail"><span class="fid">#' + escapeHtml(t.id) + ' ' + escapeHtml(t.status) + '</span>'
-                + '<span>' + escapeHtml(t.message || '无附加信息') + '</span></div>';
+            return '<div class="fail">'
+                + '<div class="fail-head"><span class="caret">\u25b8</span>'
+                + '<span class="vd ' + statusClass(t.status) + '">' + escapeHtml(t.status) + '</span>'
+                + '<span class="idx">#' + escapeHtml(t.id) + '</span>'
+                + '<span class="txt">' + escapeHtml(t.message || '无附加信息') + '</span></div>'
+                + '<div class="fail-body" hidden>' + failDetail(t) + '</div></div>';
         }).join('');
     }
 
     function renderCompile(result) {
         const block = document.getElementById('compile');
         if (result.compileMessage) {
-            block.innerHTML = '<span class="err">编译失败</span>\\n' + escapeHtml(result.compileMessage);
+            const lines = String(result.compileMessage).split('\\n');
+            block.innerHTML = '<span class="err">编译失败</span>\\n' + lines.map(function (line) {
+                const m = line.match(/^(.+?):(\\d+):(\\d+):\\s*(fatal error|error|warning|note):(.*)$/);
+                if (m) {
+                    return '<span class="lnk" data-file="' + escapeHtml(m[1]) + '" data-line="' + escapeHtml(m[2]) + '">'
+                        + escapeHtml(m[1] + ':' + m[2] + ':' + m[3]) + '</span>:'
+                        + escapeHtml(m[4]) + ':' + escapeHtml(m[5]);
+                }
+                return escapeHtml(line);
+            }).join('\\n');
             return;
         }
         block.textContent = (result.env || 'g++') + ' · ' + (result.isolation || '')
@@ -373,6 +484,8 @@ export class ResultsView implements vscode.WebviewViewProvider {
         empty.style.display = (curState === 'empty' && !hasSubmit) ? '' : 'none';
         running.classList.toggle('on', curState === 'running');
         card.classList.toggle('visible', curState === 'card');
+        const topbar = document.getElementById('topbar');
+        topbar.hidden = !(curState === 'card' || hasSubmit);
     }
 
     function renderResult(payload) {
@@ -432,6 +545,57 @@ export class ResultsView implements vscode.WebviewViewProvider {
         setText('s-ms', payload.timeMs ? payload.timeMs + ' ms' : '—');
         setText('s-mem', formatMemory(payload.memoryKb));
     }
+
+    // 失败点诊断: 点击标题展开/收起详情, 点击按钮展开完整实际输出
+    document.getElementById('fails').addEventListener('click', function (event) {
+        const more = event.target.closest('.more');
+        if (more) {
+            const full = more.parentNode.querySelector('.full');
+            if (full) {
+                const hidden = full.hasAttribute('hidden');
+                if (hidden) {
+                    full.removeAttribute('hidden');
+                } else {
+                    full.setAttribute('hidden', '');
+                }
+                more.textContent = hidden ? '收起完整实际输出' : '展开完整实际输出';
+            }
+            return;
+        }
+        const head = event.target.closest('.fail-head');
+        if (head) {
+            const body = head.parentNode.querySelector('.fail-body');
+            if (body) {
+                const hidden = body.hasAttribute('hidden');
+                if (hidden) {
+                    body.removeAttribute('hidden');
+                } else {
+                    body.setAttribute('hidden', '');
+                }
+                const caret = head.querySelector('.caret');
+                if (caret) {
+                    caret.textContent = hidden ? '\u25be' : '\u25b8';
+                }
+            }
+        }
+    });
+
+    // 编译报错: 点击「文件:行:列」跳转到对应源文件行
+    document.getElementById('compile').addEventListener('click', function (event) {
+        const link = event.target.closest('.lnk');
+        if (link) {
+            vscodeApi.postMessage({
+                type: 'openFile',
+                file: link.getAttribute('data-file'),
+                line: Number(link.getAttribute('data-line')) || 0
+            });
+        }
+    });
+
+    // 重置: 清空评测与提交结果, 回到空态
+    document.getElementById('reset').addEventListener('click', function () {
+        vscodeApi.postMessage({ type: 'reset' });
+    });
 
     window.addEventListener('message', function (event) {
         const message = event.data;

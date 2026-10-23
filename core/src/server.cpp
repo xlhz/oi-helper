@@ -23,6 +23,19 @@ namespace oi {
 
 namespace {
 
+#ifndef OI_DISPLAY_VERSION
+#define OI_DISPLAY_VERSION "V0.1.0-100"
+#endif
+
+#ifndef OI_BUILD
+#define OI_BUILD 100
+#endif
+
+std::string healthJson() {
+    return std::string("{\"name\":\"oi-helper\",\"version\":\"") + OI_DISPLAY_VERSION +
+           "\",\"build\":" + std::to_string(OI_BUILD) + ",\"status\":\"ok\"}";
+}
+
 std::string errorJson(const std::string& msg) {
     Json root = Json::makeObject();
     root["error"] = Json::makeString(msg);
@@ -175,8 +188,12 @@ void handleClient(SOCKET client) {
     std::istringstream hs(head);
     std::string method, path;
     hs >> method >> path;
+    if (method == "GET" && path == "/health") {
+        sendResponse(client, 200, healthJson());
+        return;
+    }
     if (method != "POST" || path != "/judge") {
-        sendResponse(client, 400, errorJson("仅支持 POST /judge"));
+        sendResponse(client, 400, errorJson("仅支持 GET /health 与 POST /judge"));
         return;
     }
     std::string resp;
@@ -219,6 +236,7 @@ int serveHttp(int port) {
         return 2;
     }
     std::cout << "oi-judge REST 服务已启动, 监听 http://127.0.0.1:" << port << "/judge\n";
+    std::cout << "健康检查: GET http://127.0.0.1:" << port << "/health\n";
     std::cout.flush();
     while (true) {
         SOCKET client = accept(listener, nullptr, nullptr);

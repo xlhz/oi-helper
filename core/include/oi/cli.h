@@ -43,6 +43,8 @@ struct CliOptions {
     std::string fetchExtra;    // --fetch-extra: 下载并解压「更多样例」链接
     std::string fetchExtraOut; // --fetch-extra-out: 解压目标目录
     std::string fetchOriginal; // --fetch-original: 抓取原题(洛谷/CF/AtCoder/Hydro)题面与样例
+    std::string difficulty;    // --difficulty: 查询洛谷题目难度(P1001/CF1760G)
+    std::string searchLuogu;   // --search-luogu: 按关键词检索洛谷题目
     bool fetchWinHttp = false; // --fetch-winhttp: 优先用内置网络库, 被拦再回退 curl
 
     // submit 模式

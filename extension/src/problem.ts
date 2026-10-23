@@ -151,7 +151,12 @@ export function htmlToMarkdown(html: string): string {
     s = s.replace(/<hr\s*\/?>/gi, '\n---\n');
 
     s = inlineMd(s);
-    s = s.replace(/\u0000(\d+)\u0000/g, (_, i: string) => stash[Number(i)] ?? '');
+    // 块元素可能嵌套(如 <p> 内的 <table>), 二次入栈后一次展开不够, 需反复展开到稳定
+    const expand = (text: string): string =>
+        text.replace(/\u0000(\d+)\u0000/g, (_: string, i: string) => stash[Number(i)] ?? '');
+    for (let i = 0; i < 10 && s.indexOf('\u0000') >= 0; i += 1) {
+        s = expand(s);
+    }
     return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -189,6 +194,9 @@ export function buildProblemMarkdown(problem: ContestSummary): string {
     }
     if (problem.startTime || problem.endTime) {
         meta.push(`比赛时间: ${problem.startTime || '?'} ~ ${problem.endTime || '?'}`);
+    }
+    if (problem.correctionEnd) {
+        meta.push(`补题截止: ${problem.correctionEnd}`);
     }
     if (meta.length) {
         parts.push(meta.map((m) => `- ${m}`).join('\n'));

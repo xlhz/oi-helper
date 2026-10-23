@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ContestProblemItem, ContestSummary, OriginalSummary, cleanUrl, contestProblemUrl, fetchContestFlow, fetchOriginalFlow, isContestUrl } from './fetch';
+import { ContestProblemItem, ContestSummary, OriginalSummary, cleanUrl, contestProblemUrl, fetchContestFlow, fetchDifficultyFlow, fetchOriginalFlow, isContestUrl, isLuoguUrl } from './fetch';
+import { parseOriginals } from './original';
 import { buildProblemMarkdown } from './problem';
 
 // 普通题目(做题)当前题号: 洛谷 /problem/P1001 -> P1001, xmoj problem.php?id=2298 -> 2298
@@ -79,10 +80,13 @@ export class ProblemView {
 
     private titleOverride = '';
 
-    // 普通题目(做题链接, 非竞赛): 当前链接与题号, 用于按题目编号跳转
+    // 普通题目(做题链接): 当前链接与题号, 用于按题目编号跳转
     private plainUrl = '';
 
     private plainId = '';
+
+    // 自动获取的题目难度(洛谷难度名, 空表示未获取/不适用)
+    private difficulty = '';
 
     private readonly listeners: ((state: ProblemNavState) => void)[] = [];
 
@@ -141,11 +145,10 @@ export class ProblemView {
         this.titleOverride = '';
         this.plainUrl = '';
         this.plainId = '';
+        this.difficulty = '';
         this.markdown = buildProblemMarkdown(summary);
-        if (this.panel) {
-            this.show();
-        }
         this.notifyNav();
+        this.loadDifficulty(this.luoguIdOfSource(summary.source));
     }
 
     // 仅同步普通题目状态(不打开预览面板): 供评测面板识别/导入做题链接后填充题目编号
@@ -160,7 +163,9 @@ export class ProblemView {
         this.plainUrl = target;
         this.plainId = plainIdOf(target);
         this.titleOverride = (title ?? '').trim();
+        this.difficulty = '';
         this.notifyNav();
+        this.loadDifficulty(isLuoguUrl(target) ? plainIdOf(target) : '');
     }
 
     // 预览任意 Markdown(如原题题面): 不带竞赛导航与倒计时
@@ -169,9 +174,9 @@ export class ProblemView {
         this.problems = [];
         this.markdown = markdown;
         this.banner = '';
+        this.difficulty = '';
         this.titleOverride = title;
         this.show();
-        this.notifyNav();
     }
 
     // url 为空时仅揭示范本
@@ -246,6 +251,7 @@ export class ProblemView {
         };
         // 立刻显示面板, 避免抓取期间看不到任何反馈
         this.banner = '';
+        this.difficulty = '';
         this.markdown = '# 加载中...\n';
         render();
         let summary: ContestSummary;
@@ -277,6 +283,7 @@ export class ProblemView {
         this.plainId = '';
         render();
         this.notifyNav();
+        this.loadDifficulty(this.luoguIdOfSource(summary.source));
         return summary;
     }
 
@@ -295,6 +302,7 @@ export class ProblemView {
         };
         // 立刻显示面板, 避免抓取期间看不到任何反馈
         this.banner = '';
+        this.difficulty = '';
         this.markdown = '# 加载中...\n';
         render();
         let summary: OriginalSummary;
@@ -324,6 +332,7 @@ export class ProblemView {
         this.markdown = summary.markdown ?? '';
         render();
         this.notifyNav();
+        this.loadDifficulty(isLuoguUrl(url) ? plainIdOf(url) : '');
         return summary;
     }
 
@@ -460,7 +469,8 @@ export class ProblemView {
             return [
                 `<input class="inp num" id="nav-num" type="text" placeholder="题目编号" value="${escapeHtml(this.plainId)}">`,
                 '<button class="btn btn-accent" id="nav-goto" type="button">跳转</button>',
-                '<button class="btn" id="nav-copy" type="button">复制 Markdown</button>'
+                '<button class="btn" id="nav-copy" type="button">复制 Markdown</button>',
+                this.diffChip()
             ].join('');
         }
         // 非竞赛内容(如原题题面): 仅保留复制按钮
@@ -474,8 +484,51 @@ export class ProblemView {
             `<input class="inp num" id="nav-num" type="text" placeholder="题号" value="${escapeHtml(cur)}">`,
             '<button class="btn btn-accent" id="nav-goto" type="button">跳转</button>',
             '<button class="btn" id="nav-copy" type="button">复制 Markdown</button>',
+            this.diffChip(),
             '<span class="timer" id="nav-timer"></span>'
         ].join('');
+    }
+
+    // 难度徽标(自动获取自洛谷题号); 未获取时不显示
+    private diffChip(): string {
+        return this.difficulty ? `<span class="diff">难度 ${escapeHtml(this.difficulty)}</span>` : '';
+    }
+
+    // 由题目 source 解析洛谷题号(如 AHOI2005 P1403 -> P1403); 无则返回空
+    private luoguIdOfSource(source: string | undefined): string {
+        const ref = parseOriginals(source ?? '').find((r) => r.oj === 'luogu');
+        return ref && ref.id ? ref.id : '';
+    }
+
+    // 自动获取题目难度: 查不到(非洛谷题/未登录/网络失败)时静默留空
+    private async loadDifficulty(pid: string): Promise<void> {
+        const value = (pid ?? '').trim();
+        if (!value) {
+            if (this.difficulty) {
+                this.difficulty = '';
+                if (this.panel) {
+                    this.show();
+                }
+            }
+            return;
+        }
+        const exe = this.getJudgeExe();
+        if (!exe) {
+            return;
+        }
+        let text = '';
+        try {
+            const data = await fetchDifficultyFlow(value, exe, this.output);
+            text = data.ok && data.text ? data.text : '';
+        } catch {
+            text = '';
+        }
+        if (text !== this.difficulty) {
+            this.difficulty = text;
+            if (this.panel) {
+                this.show();
+            }
+        }
     }
 
     // 比赛倒计时数据: 优先训练会话截止时间, 其次结束时间, 再退化到服务器剩余秒数
@@ -560,6 +613,14 @@ export class ProblemView {
         font-variant-numeric: tabular-nums;
     }
     .timer-end { color: var(--vscode-errorForeground, #f0584f); }
+    .diff {
+        padding: 2px 10px;
+        border: 1px solid var(--vscode-panel-border);
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        white-space: nowrap;
+    }
     .banner {
         margin: 12px 20px 0;
         padding: 8px 12px;

@@ -99,7 +99,7 @@ function cfRef(id: string): OriginalRef | undefined {
     };
 }
 
-function luoguRef(id: string): OriginalRef {
+export function luoguRef(id: string): OriginalRef {
     const pid = id.toUpperCase().startsWith('AT_') ? `AT_${id.slice(3).toLowerCase()}` : id.toUpperCase();
     return {
         oj: 'luogu',
@@ -176,13 +176,10 @@ function refsOfToken(token: string): OriginalRef[] {
         const ref = hydroRef(hydro[1].trim());
         return ref ? [ref] : [];
     }
-    // 洛谷题号: P1001 / B2001 / SP1234 / UVA100 / CF1760G / AT_xxx / tarjan 等
-    if (/^[A-Za-z][A-Za-z0-9_]{2,}$/.test(t)) {
-        const lower = t.toLowerCase();
-        const ug = /^(?:uva|sp|p|b|cf|at|spoj)/.test(lower);
-        if (ug || /^\d/.test(t)) {
-            out.push(luoguRef(t));
-        }
+    // 洛谷题号须为 前缀+数字: P1001 / B2001 / SP1234 / UVA100 / CF1760G / SPOJ100
+    // 避免 BZOJ1968 / HDU1234 等以字母开头的其它 OJ 题号被误判为洛谷题
+    if (/^(?:p|b|sp|uva|cf|at|spoj)\d+[a-z]?$/i.test(t)) {
+        out.push(luoguRef(t));
     }
     return out;
 }

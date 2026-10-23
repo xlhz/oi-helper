@@ -1,0 +1,76 @@
+{
+    "id": "atcoder",
+    "name": "AtCoder",
+    "version": "1.0.0",
+    "domains": [
+        "atcoder.jp"
+    ],
+    "features": {
+        "problem": {
+            "urlPatterns": [
+                "/contests/[^/]+/tasks/"
+            ],
+            "selectors": [
+                "#task-statement",
+                ".problem-statement"
+            ]
+        },
+        "login": {
+            "urlPatterns": [
+                "/login"
+            ],
+            "selectors": [
+                "input[name=\"username\"]",
+                "input[name=\"password\"]",
+                "form[action*=\"login\"]"
+            ]
+        }
+    },
+    "selectors": {
+        "pid": [
+            "#task-statement .h2"
+        ],
+        "title": [
+            "#task-statement .h2",
+            ".h2",
+            "h2",
+            "title"
+        ],
+        "statement": [
+            "#task-statement .lang-en",
+            "#task-statement"
+        ],
+        "timeLimit": [
+            "#task-statement",
+            "#main"
+        ],
+        "memoryLimit": [
+            "#task-statement",
+            "#main"
+        ],
+        "sampleInput": [
+            "#task-statement .lang-en .sample-test .input pre",
+            "#task-statement .lang-en .sample-input"
+        ],
+        "sampleOutput": [
+            "#task-statement .lang-en .sample-test .output pre",
+            "#task-statement .lang-en .sample-output"
+        ],
+        "loginUser": [
+            "input[name=\"username\"]"
+        ],
+        "loginPass": [
+            "input[name=\"password\"]",
+            "input[type=\"password\"]"
+        ],
+        "captchaImage": [
+            "img[src*=\"captcha\"]"
+        ]
+    },
+    "pidPattern": "/contests/([^/]+)/tasks/([^/?#]+)",
+    "pidTemplate": "$2",
+    "submitUrl": {
+        "pattern": "/contests/([^/]+)/tasks/",
+        "template": "https://atcoder.jp/contests/$1/submit"
+    }
+}

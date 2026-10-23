@@ -2,7 +2,7 @@
     "name": "oi-helper",
     "displayName": "OI Helper",
     "description": "调用 oi-judge 进行 OI 题目评测",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "publisher": "oihelper",
     "license": "MIT",
     "private": true,
@@ -14,10 +14,16 @@
     ],
     "main": "./out/extension.js",
     "activationEvents": [
+        "onStartupFinished",
         "onView:oiHelperPanel",
         "onView:oiHelperResults",
         "onView:oiHelperContest",
-        "onCommand:oiHelper.openPanel"
+        "onCommand:oiHelper.openPanel",
+        "onCommand:oiHelper.envCheck",
+        "onCommand:oiHelper.applyEditorConfig",
+        "onCommand:oiHelper.fixYesCase",
+        "onCommand:oiHelper.fixFreopen",
+        "onCommand:oiHelper.fixDivisionByZero"
     ],
     "contributes": {
         "commands": [
@@ -83,7 +89,32 @@
             },
             {
                 "command": "oiHelper.loadContest",
-                "title": "载入比赛目录",
+                "title": "打开比赛面板 (洛谷 ICPC)",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.envCheck",
+                "title": "C++ 环境体检",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.applyEditorConfig",
+                "title": "生成/修正编辑器配置",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.fixYesCase",
+                "title": "修复 YES/Yes 大小写",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.fixFreopen",
+                "title": "补全 freopen",
+                "category": "OI Helper"
+            },
+            {
+                "command": "oiHelper.fixDivisionByZero",
+                "title": "补除零/模零判断",
                 "category": "OI Helper"
             }
         ],
@@ -139,6 +170,11 @@
                     "type": "string",
                     "default": "",
                     "description": "oi-judge 可执行文件路径. 留空则在当前工作区下查找 core/build/oi-judge(.exe); 若要在多个工作区共用同一份 oi-judge, 可在用户设置里填写绝对路径."
+                },
+                "oiHelper.tempDir": {
+                    "type": "string",
+                    "default": "",
+                    "description": "临时目录(编译产物/测试点/提交临时文件). 留空时自动选择剩余空间最大的磁盘, 在其下建立 oi-helper-temp."
                 },
                 "oiHelper.xmojUser": {
                     "type": "string",
@@ -205,6 +241,12 @@
                     "default": 0,
                     "minimum": 0,
                     "description": "ICPC 封榜时长(分钟), 比赛结束前该时长为封榜期, 0 表示不封榜; 作为 contest.json 缺省."
+                },
+                "oiHelper.contestSyncSeconds": {
+                    "type": "number",
+                    "default": 15,
+                    "minimum": 5,
+                    "description": "洛谷比赛同步间隔(秒), 用于比赛状态与过题提醒."
                 }
                 }
             },
@@ -319,6 +361,21 @@
                     "type": "boolean",
                     "default": true,
                     "description": "题目预览面板增量更新: 切换题目时只替换内容, 不重建整页, 图片不会重新下载; 关闭则每次重建页面."
+                }
+                }
+            },
+            {
+                "title": "OI Helper: 桌面集成",
+                "properties": {
+                "oiHelper.oihEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "启动时连接桌面程序 OI Helper 的 WebSocket 服务, 上报工作区与服务连接状态; 关闭后不连接."
+                },
+                "oiHelper.oihNotify": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "接收桌面程序统一事件源的比赛事件并在编辑器内提示; 关闭后仍可在桌面事件区查看."
                 }
                 }
             }

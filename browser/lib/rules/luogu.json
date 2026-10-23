@@ -1,0 +1,93 @@
+{
+    "id": "luogu",
+    "name": "洛谷",
+    "version": "1.0.0",
+    "domains": [
+        "luogu.com.cn",
+        "luogu.org"
+    ],
+    "fetch": {
+        "mode": "luogu-json",
+        "contentQuery": "_contentOnly=1"
+    },
+    "features": {
+        "problem": {
+            "urlPatterns": [
+                "/problem/[A-Za-z0-9_]",
+                "/training/",
+                "/contest/"
+            ],
+            "selectors": [
+                ".problem-statement",
+                "#problem-content",
+                ".problem-layout"
+            ]
+        },
+        "login": {
+            "urlPatterns": [
+                "/auth/login"
+            ],
+            "selectors": [
+                "input[name=\"username\"]",
+                "form[action*=\"login\"]",
+                ".login-form"
+            ]
+        }
+    },
+    "selectors": {
+        "pid": [
+            ".problem-statement .pid",
+            "h1"
+        ],
+        "title": [
+            ".problem-statement h1",
+            ".problem-layout h1",
+            "h1",
+            "title"
+        ],
+        "statement": [
+            ".problem-statement",
+            "#problem-content",
+            ".problem-layout",
+            "article"
+        ],
+        "timeLimit": [
+            ".problem-statement .time-limit",
+            ".time-limit"
+        ],
+        "memoryLimit": [
+            ".problem-statement .memory-limit",
+            ".memory-limit"
+        ],
+        "sampleInput": [
+            ".sample-input pre",
+            ".sample .input pre",
+            ".problem-sample .input pre"
+        ],
+        "sampleOutput": [
+            ".sample-output pre",
+            ".sample .output pre",
+            ".problem-sample .output pre"
+        ],
+        "loginUser": [
+            "input[name=\"username\"]",
+            "#username"
+        ],
+        "loginPass": [
+            "input[type=\"password\"]",
+            "#password"
+        ],
+        "captchaImage": [
+            "img[src*=\"captcha\"]",
+            "img[src*=\"verify\"]",
+            "img#captcha",
+            "img.captcha"
+        ]
+    },
+    "pidPattern": "/problem/([A-Za-z0-9_]+)",
+    "pidTemplate": "$1",
+    "submitUrl": {
+        "pattern": "/problem/([A-Za-z0-9_]+)",
+        "template": "https://www.luogu.com.cn/problem/$1"
+    }
+}

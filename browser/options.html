@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OI Helper 采集设置</title>
+    <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>OI Helper 采集设置</h1>
+            <p>浏览器扩展 · 规则按站点版本化 · 高风险开关默认关闭</p>
+        </div>
+        <span id="versionBadge" class="badge">v0.1.0</span>
+    </header>
+
+    <main class="page">
+        <div id="globalMsg" class="msg hidden"></div>
+
+        <section class="card">
+            <div class="card-title">
+                <span>站点规则</span>
+                <span class="hint">域名 + DOM 特征匹配</span>
+            </div>
+            <div id="ruleList" class="list"></div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>代理</span>
+                <span id="proxyBadge" class="badge off">未启用</span>
+            </div>
+            <div class="grid-2">
+                <label>
+                    <span class="hint">代理地址 host:port</span>
+                    <input id="proxyAddress" placeholder="host:port" autocomplete="off">
+                </label>
+                <label>
+                    <span class="hint">账号 (可选)</span>
+                    <input id="proxyUser" placeholder="代理账号" autocomplete="off">
+                </label>
+                <label>
+                    <span class="hint">密码 (可选)</span>
+                    <input id="proxyPass" type="password" placeholder="代理密码" autocomplete="new-password">
+                </label>
+            </div>
+            <div class="row">
+                <button id="saveProxyBtn" class="btn">保存</button>
+                <button id="enableProxyBtn" class="btn primary">启用代理</button>
+                <button id="disableProxyBtn" class="btn danger">停用</button>
+            </div>
+            <div class="hint">只使用你填写的代理, 扩展不内置任何代理地址; PAC 仅对规则命中的 OJ 域名分流, 其余直连.</div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>自动填充账号密码</span>
+                <span id="autofillBadge" class="badge off">关闭</span>
+            </div>
+            <div id="vaultStatus" class="hint">尚未保存账号密码.</div>
+            <div class="grid-2">
+                <label>
+                    <span class="hint">账号</span>
+                    <input id="vaultUser" placeholder="登录账号" autocomplete="off">
+                </label>
+                <label>
+                    <span class="hint">密码</span>
+                    <input id="vaultPass" type="password" placeholder="登录密码" autocomplete="new-password">
+                </label>
+            </div>
+            <div class="row">
+                <button id="saveVaultBtn" class="btn primary">保存账号密码</button>
+                <button id="clearVaultBtn" class="btn">清除本地凭据</button>
+                <button id="toggleAutofillBtn" class="btn">开启自动填充</button>
+            </div>
+            <div class="hint">密码使用 WebCrypto AES-GCM 加密后存入 chrome.storage.local; 密钥同样保存在本地, 仅属混淆级保护, 不是强安全.</div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>验证码识别</span>
+                <span id="captchaBadge" class="badge off">关闭</span>
+            </div>
+            <div class="row">
+                <label>
+                    <span class="hint">Provider</span>
+                    <select id="captchaProvider">
+                        <option value="">不配置</option>
+                    </select>
+                </label>
+                <button id="toggleCaptchaBtn" class="btn">开启验证码识别</button>
+            </div>
+            <div class="hint">Provider 可插拔; 默认 provider 只做本地图像定位与提示, 不联网, 不接入任何外部识别服务.</div>
+            <div class="card-title" style="margin-top: 12px;">
+                <span>生效站点</span>
+                <span class="hint">按 OJ 勾选并持久化</span>
+            </div>
+            <div id="captchaSites" class="checks"></div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>桌面程序</span>
+                <span id="desktopBadge" class="badge off">未配置</span>
+            </div>
+            <div class="grid-2">
+                <label>
+                    <span class="hint">API 地址</span>
+                    <input id="desktopApi" placeholder="http://127.0.0.1:17322" autocomplete="off">
+                </label>
+                <label>
+                    <span class="hint">令牌 (只显示是否已保存)</span>
+                    <input id="desktopToken" type="password" placeholder="粘贴桌面程序令牌" autocomplete="new-password">
+                </label>
+                <label>
+                    <span class="hint">题目目录 (可选)</span>
+                    <input id="desktopProblemDir" placeholder="例如 D:\OI\problems\P1000" autocomplete="off">
+                </label>
+            </div>
+            <div class="row">
+                <button id="saveDesktopBtn" class="btn primary">保存</button>
+                <button id="testDesktopBtn" class="btn">测试连接</button>
+            </div>
+            <div id="desktopStatus" class="hint">尚未保存桌面程序配置.</div>
+            <div class="hint">令牌只保存在 chrome.storage.local, 扩展不会读取 agent.json; 健康检查不需要令牌.</div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <span>手动分析选择器</span>
+                <span class="hint">关闭浏览器重开后仍生效</span>
+            </div>
+            <div id="selectorList" class="list"></div>
+            <div class="hint">在目标页面点击扩展图标, 选择用途后点选元素; 抓取时优先使用这里保存的选择器.</div>
+        </section>
+    </main>
+
+    <div id="captchaModal" class="modal hidden">
+        <div class="modal-body">
+            <h2>开启验证码识别的风险警告</h2>
+            <div class="warning-text">
+                验证码识别默认关闭. 开启后, 本扩展会在你本人已登录的浏览器内读取当前页面的验证码图片, 并交给所选 provider 处理.
+                该功能可能违反目标站点的规则, 可能导致账号被限制或封禁. 由此产生的账号风险, 封禁风险及其他一切后果,
+                均由你自行承担, 本扩展不提供任何保证. 请确认你已完整阅读并自愿承担全部风险.
+            </div>
+            <p class="hint" style="margin-top: 10px;">当前勾选站点: <span id="captchaScopeText">未勾选</span></p>
+            <p class="hint">确认按钮需完整显示 5 秒后才可点击.</p>
+            <div class="modal-actions">
+                <button id="captchaCancelBtn" class="btn">取消</button>
+                <button id="captchaConfirmBtn" class="btn danger" disabled>请阅读 5 秒 (5)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="autofillModal" class="modal hidden">
+        <div class="modal-body">
+            <h2>开启自动填充?</h2>
+            <div class="warning-text">
+                开启后, 扩展只会在规则命中的登录页写入本地保存的账号密码.
+                密码以本地 AES-GCM 密文保存, 但密钥同样保存在本地扩展存储中, 仅属混淆级保护, 不等同于系统级安全存储.
+            </div>
+            <div class="modal-actions">
+                <button id="autofillCancelBtn" class="btn">取消</button>
+                <button id="autofillConfirmBtn" class="btn primary">我已知晓, 开启</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/config.js"></script>
+    <script src="lib/proxy.js"></script>
+    <script src="lib/vault.js"></script>
+    <script src="lib/captcha.js"></script>
+    <script src="lib/desktop.js"></script>
+    <script src="options.js"></script>
+</body>
+</html>

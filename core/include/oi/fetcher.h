@@ -39,6 +39,34 @@ struct FetchResult {
     std::string error;  // ok 为 false 时的中文错误
 };
 
+// 洛谷题目难度查询结果
+struct DifficultyResult {
+    bool ok = false;
+    std::string pid;
+    int difficulty = -1;  // 0..7, -1 表示未知
+    std::string text;     // 中文难度名
+    std::string error;
+};
+
+// 查询洛谷题目难度(pid 形如 P1403); cookie 为洛谷登录 Cookie(可空)
+DifficultyResult fetchLuoguDifficulty(const std::string& pid, const std::string& cookie);
+
+// 洛谷题目检索结果项
+struct LuoguSearchItem {
+    std::string pid;
+    std::string name;
+};
+
+// 洛谷题目检索结果
+struct LuoguSearchResult {
+    bool ok = false;
+    std::vector<LuoguSearchItem> items;
+    std::string error;
+};
+
+// 按关键词检索洛谷题目(竞赛题 source 非题号时用于定位原题); cookie 可空
+LuoguSearchResult searchLuogu(const std::string& keyword, const std::string& cookie);
+
 // 抓取 xmoj 题目页并生成题目目录; 失败时不产生半成品目录
 FetchResult fetchProblem(const FetchOptions& opt);
 
@@ -66,7 +94,8 @@ struct ContestProblem {
     std::string dataRange;
     std::string download;
     std::string startTime;   // 开始时间(个人时间线优先)
-    std::string endTime;     // 结束时间(个人时间线优先)
+    std::string endTime;     // 结束时间(个人时间线优先); rule 1/2 的比赛为比赛结束(onsiteEndTime)
+    std::string correctionEnd;  // 补题截止(rule 1/2 的比赛, 即原 endTime; 其余为空)
     std::string classId;     // 所属班级
     std::string sessionEnd;  // 训练会话截止(本场个人时间线, 无则取同班当前生效的个人时间线)
     bool fileIO = false;     // 是否文件 IO(新版接口用 name 表示)

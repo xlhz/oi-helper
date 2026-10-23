@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cmath>
 #include <ctime>
 #include <filesystem>
@@ -120,6 +121,39 @@ std::string trimSummary(std::string s, size_t limit = 500) {
     return s;
 }
 
+// 读取文件开头至多 limit 字节, 读不到返回空串
+std::string readHead(const std::string& path, size_t limit) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return "";
+    std::string s;
+    s.resize(limit);
+    in.read(&s[0], static_cast<std::streamsize>(limit));
+    s.resize(static_cast<size_t>(in.gcount()));
+    return s;
+}
+
+// 依据退出码与 stderr 文本推断运行时错误类型
+std::string diagnoseRe(const RunResult& rr, const std::string& se) {
+    unsigned ec = static_cast<unsigned>(rr.exitCode);
+    if (ec == 0xC0000005u) return "数组越界或空指针访问";
+    if (ec == 0xC00000FDu) return "栈溢出, 递归过深或局部数组过大";
+    if (ec == 0xC0000094u) return "整数除零";
+    if (ec == 0xC000008Eu) return "浮点除零";
+    if (ec == 0xC000001Du) return "非法指令";
+    if (se.find("terminate called") != std::string::npos ||
+        se.find("std::bad_alloc") != std::string::npos) {
+        return "未捕获异常导致终止";
+    }
+    std::string low = se;
+    for (char& c : low) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (low.find("no such file") != std::string::npos ||
+        low.find("cannot open") != std::string::npos ||
+        low.find("permission denied") != std::string::npos || low.find("fopen") != std::string::npos) {
+        return "文件读写错误, 请检查 freopen 文件名与路径";
+    }
+    return "";
+}
+
 void applyRunStatus(const RunResult& rr, TestResult& tr) {
     tr.timeMs = rr.timeMs;
     tr.memoryKb = rr.memoryKb;
@@ -203,7 +237,14 @@ TestResult runSingleTest(const TestCase& tc, JudgeContext& ctx) {
 
     RunResult rr = ctx.runner->run(ri);
     applyRunStatus(rr, tr);
-    if (tr.status != Status::AC) return tr;
+    if (tr.status != Status::AC) {
+        if (tr.status == Status::RE) {
+            tr.stderrText = readHead(ri.stderrFile, 2000);
+            std::string diag = diagnoseRe(rr, tr.stderrText);
+            if (!diag.empty()) tr.message += " (" + diag + ")";
+        }
+        return tr;
+    }
 
     CompareResult cr;
     if (task.problem.checker == "testlib") {
@@ -220,6 +261,11 @@ TestResult runSingleTest(const TestCase& tc, JudgeContext& ctx) {
     }
     tr.status = cr.equal ? Status::AC : Status::WA;
     tr.message = cr.message;
+    if (!cr.equal) {
+        tr.diffLine = cr.line;
+        tr.actual = readHead(participantFile, 4000);
+        tr.expected = readHead(ansFile, 4000);
+    }
     return tr;
 }
 
@@ -775,6 +821,10 @@ Json buildResultJson(const JudgeResult& res) {
         node["score"] = Json::makeInt(t.score);
         node["maxScore"] = Json::makeInt(t.maxScore);
         node["message"] = Json::makeString(t.message);
+        node["stderr"] = Json::makeString(t.stderrText);
+        node["actual"] = Json::makeString(t.actual);
+        node["expected"] = Json::makeString(t.expected);
+        node["diffLine"] = Json::makeInt(t.diffLine);
         tests.arrVal.push_back(node);
     }
     root["tests"] = tests;

@@ -1,0 +1,83 @@
+{
+    "id": "xmoj",
+    "name": "XMOJ",
+    "version": "1.0.0",
+    "domains": [
+        "xmoj.tech"
+    ],
+    "features": {
+        "problem": {
+            "urlPatterns": [
+                "/problem\\.php",
+                "/web/contest/",
+                "/p/"
+            ],
+            "selectors": [
+                ".problem-content",
+                "#problem-content",
+                "#main h2"
+            ]
+        },
+        "login": {
+            "urlPatterns": [
+                "/login\\.php"
+            ],
+            "selectors": [
+                "input[name=\"user_id\"]",
+                "input[name=\"password\"]",
+                "#login"
+            ]
+        }
+    },
+    "selectors": {
+        "pid": [
+            ".problem-title",
+            "#main h2"
+        ],
+        "title": [
+            ".problem-title",
+            "#main h2",
+            "h2",
+            "title"
+        ],
+        "statement": [
+            ".problem-content",
+            "#problem-content",
+            "#main"
+        ],
+        "timeLimit": [
+            ".time-limit",
+            "#main"
+        ],
+        "memoryLimit": [
+            ".memory-limit",
+            "#main"
+        ],
+        "sampleInput": [
+            ".sample-input pre",
+            ".sample-input"
+        ],
+        "sampleOutput": [
+            ".sample-output pre",
+            ".sample-output"
+        ],
+        "loginUser": [
+            "input[name=\"user_id\"]",
+            "input[name=\"username\"]"
+        ],
+        "loginPass": [
+            "input[name=\"password\"]",
+            "input[type=\"password\"]"
+        ],
+        "captchaImage": [
+            "img[src*=\"captcha\"]",
+            "img[src*=\"verify\"]",
+            "img#captcha"
+        ]
+    },
+    "pidPattern": "[?&]id=(\\d+)",
+    "pidTemplate": "$1",
+    "submitUrl": {
+        "template": "{url}"
+    }
+}
