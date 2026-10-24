@@ -13,7 +13,7 @@ const { Oihd, defaultDataDir } = require('./oihd');
 const { scanWorkspaces, normalizeInstanceAddress, createWorkspaceStructure } = require('./oih-scan');
 const { SyncEngine } = require('./sync');
 const { WsService } = require('./ws');
-const { ApiService } = require('./api');
+const { ApiService, resolveJudgePath } = require('./api');
 const { LanService } = require('./lan');
 const { EventService } = require('./events');
 const { McpHost } = require('./mcp-host');
@@ -1009,6 +1009,13 @@ async function startServices() {
     wsService = new WsService({
         dataDir: oihd.dir,
         port: settings.ws.port,
+        judgePath: (() => {
+            try {
+                return resolveJudgePath();
+            } catch {
+                return '';
+            }
+        })(),
         onLog: log,
         onEvent: (name, data) => {
             if (name === 'hello') {

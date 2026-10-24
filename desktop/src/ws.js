@@ -218,6 +218,7 @@ class WsService {
         this.basePort = Number(options.port) > 0 ? Number(options.port) : 17321;
         this.maxAttempts = options.maxAttempts || 12;
         this.apiPort = Number(options.apiPort) || 0;
+        this.judgePath = String(options.judgePath || '');
         this.onLog = typeof options.onLog === 'function' ? options.onLog : () => {};
         this.onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
         this.token = crypto.randomBytes(32).toString('hex');
@@ -516,6 +517,7 @@ class WsService {
             pid: process.pid,
             version: DISPLAY_VERSION,
             build: BUILD,
+            judgePath: this.judgePath,
             updatedAt: new Date().toISOString()
         };
         fs.writeFileSync(path.join(this.dataDir, 'agent.json'), JSON.stringify(data, null, 4));

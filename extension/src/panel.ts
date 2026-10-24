@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { JudgeCase, JudgeOptions, JudgeResult, promptJudgePath, resolveJudgePath, runJudge, tempRoot } from './judge';
+import { JudgeCase, JudgeOptions, JudgeResult, judgeHint, promptJudgePath, resolveJudgePath, runJudge, tempRoot } from './judge';
 import { ContestSummary, DifficultySummary, FetchSummary, OriginalSubmitSummary, OriginalSummary, SubmitSummary, cleanUrl, clearOriginalCache, contestProblemUrl, downloadUrlOf, fetchContestFlow, fetchDifficultyFlow, fetchExtraFlow, fetchOriginalFlow, fetchProblemFlow, isContestUrl, isLuoguUrl, isXmojUrl, oldContestUrlToNew, runSubmitResult, runSubmitResultHydro, runSubmitResultLuogu, searchLuoguFlow, submitFlow, submitOriginalFlow } from './fetch';
 import { OriginalRef, luoguRef, ojLabel, parseOriginals } from './original';
 import { ProblemView } from './problemView';
@@ -629,8 +629,9 @@ export class PanelController implements vscode.WebviewViewProvider {
         }
         const exe = resolveJudgePath();
         if (!exe) {
+            const hint = judgeHint();
             await promptJudgePath();
-            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: '未找到 oi-judge 可执行文件.' } });
+            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: hint } });
             return;
         }
         const extraDir = path.join(this.lastDownload.dir, 'extra');
@@ -667,8 +668,9 @@ export class PanelController implements vscode.WebviewViewProvider {
         url = cleanUrl(url);
         const exe = resolveJudgePath();
         if (!exe) {
+            const hint = judgeHint();
             await promptJudgePath();
-            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: '未找到 oi-judge 可执行文件.' } });
+            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: hint } });
             return;
         }
         let summary: ContestSummary;
@@ -980,8 +982,9 @@ export class PanelController implements vscode.WebviewViewProvider {
     private async runSiteImport(url: string, sampleMode?: string): Promise<void> {
         const exe = resolveJudgePath();
         if (!exe) {
+            const hint = judgeHint();
             await promptJudgePath();
-            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: '未找到 oi-judge 可执行文件.' } });
+            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: hint } });
             return;
         }
         let summary: OriginalSummary;
@@ -1039,8 +1042,9 @@ export class PanelController implements vscode.WebviewViewProvider {
         }
         const exe = resolveJudgePath();
         if (!exe) {
+            const hint = judgeHint();
             await promptJudgePath();
-            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: '未找到 oi-judge 可执行文件.' } });
+            this.webview?.postMessage({ type: 'fetchResult', payload: { ok: false, error: hint } });
             return;
         }
         let summary: FetchSummary;

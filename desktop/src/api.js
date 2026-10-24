@@ -419,4 +419,4 @@ class ApiService {
     }
 }
 
-module.exports = { ApiService };
+module.exports = { ApiService, resolveJudgePath };

@@ -70,6 +70,10 @@ export function resolveJudgePath(): string | undefined {
     if (fromEnv) {
         candidates.push(fromEnv);
     }
+    const fromAgent = agentJudgePath();
+    if (fromAgent) {
+        candidates.push(fromAgent);
+    }
     const configured = (vscode.workspace.getConfiguration('oiHelper').get<string>('judgePath') ?? '').trim();
     if (configured) {
         candidates.push(configured);
@@ -101,9 +105,35 @@ export function resolveJudgePath(): string | undefined {
     return configured || undefined;
 }
 
+// 找不到 judge 时给出可操作的提示
+export function judgeHint(): string {
+    const base = process.env.LOCALAPPDATA
+        ? path.join(process.env.LOCALAPPDATA, 'Programs', 'OI Helper', 'resources', 'judge', 'oi-judge.exe')
+        : '%LOCALAPPDATA%\\Programs\\OI Helper\\resources\\judge\\oi-judge.exe';
+    return `未找到 oi-judge 可执行文件. 新版安装包应包含 ${base}; 若不存在, 请重新安装最新 OI-Helper-0.1.0-setup.exe, 或在设置中配置 oiHelper.judgePath.`;
+}
+
+// 桌面程序在 agent.json 中写入实际 judge 路径, 支持自定义安装目录
+function agentJudgePath(): string {
+    const appData = process.env.APPDATA;
+    if (!appData) {
+        return '';
+    }
+    try {
+        const file = path.join(appData, 'OIHelper', 'agent.json');
+        if (!fs.existsSync(file)) {
+            return '';
+        }
+        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+        return typeof data.judgePath === 'string' ? data.judgePath.trim() : '';
+    } catch {
+        return '';
+    }
+}
+
 export async function promptJudgePath(): Promise<void> {
     const action = await vscode.window.showErrorMessage(
-        '未找到 oi-judge 可执行文件. 请安装 OI Helper 桌面程序, 或配置 oiHelper.judgePath 指向 oi-judge.exe.',
+        judgeHint(),
         '打开设置'
     );
     if (action === '打开设置') {
