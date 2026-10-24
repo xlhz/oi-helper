@@ -54,6 +54,13 @@
                 ]
             },
             {
+                "from": "../core/build",
+                "to": "judge",
+                "filter": [
+                    "oi-judge.exe"
+                ]
+            },
+            {
                 "from": "../browser",
                 "to": "browser",
                 "filter": [

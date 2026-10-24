@@ -36,3 +36,8 @@ target_compile_definitions(oi-judge PRIVATE
 if(WIN32)
     target_link_libraries(oi-judge PRIVATE kernel32 psapi ws2_32 winhttp)
 endif()
+
+# 静态链接 MinGW 运行库, 使 oi-judge.exe 可直接分发, 不依赖 libstdc++/libgcc/libwinpthread
+if(WIN32 AND MINGW)
+    target_link_options(oi-judge PRIVATE -static -static-libgcc -static-libstdc++)
+endif()

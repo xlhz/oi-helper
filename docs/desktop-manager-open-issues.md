@@ -58,8 +58,8 @@
 | 产物 | 状态 |
 |---|---|
 | `release/v0.1.0-100/` | 发布包: 安装包、vsix、浏览器扩展 zip、README、docs、`SHA256SUMS.txt` |
-| `desktop/dist/OI-Helper-0.1.0-setup.exe` | 已产出 112,648,442 字节; 静默安装 exit 0; 内含 `browser/` 28 文件、docs 2 篇、README 与 1 个 vsix |
+| `desktop/dist/OI-Helper-0.1.0-setup.exe` | 已产出 113,353,665 字节; 静默安装 exit 0; 内含 `judge/oi-judge.exe`、`browser/` 28 文件、docs 2 篇、README 与 1 个 vsix |
 | `desktop/dist/win-unpacked/` | 已产出 |
-| `extension/oi-helper-0.1.0.vsix` | 已产出 255,917 字节, 49 文件 |
+| `extension/oi-helper-0.1.0.vsix` | 已产出 256,269 字节, 49 文件 |
 | `browser-0.1.0.zip` | 已产出 61,480 字节, 28 条目 (含 AtCoder 题名修复) |
 | README `V0.1.0-100 发布说明` | 已补充 |

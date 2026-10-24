@@ -54,7 +54,7 @@ function sameToken(a, b) {
     return crypto.timingSafeEqual(ha, hb);
 }
 
-// 定位 oi-judge: 环境变量优先, 其次仓库 core/build
+// 定位 oi-judge: 环境变量优先, 其次安装目录 resources/judge, 最后仓库 core/build
 function resolveJudgePath() {
     const fromEnv = String(process.env.OI_JUDGE_PATH || '').trim();
     if (fromEnv && fs.existsSync(fromEnv)) {
@@ -62,15 +62,20 @@ function resolveJudgePath() {
     }
     const repoRoot = path.resolve(__dirname, '..', '..');
     const names = ['oi-judge.exe', 'oi-judge'];
-    for (const root of [repoRoot, process.cwd()]) {
+    const dirs = [
+        path.join(repoRoot, 'judge'),
+        path.join(repoRoot, 'core', 'build'),
+        path.join(process.cwd(), 'core', 'build')
+    ];
+    for (const dir of dirs) {
         for (const name of names) {
-            const candidate = path.join(root, 'core', 'build', name);
+            const candidate = path.join(dir, name);
             if (fs.existsSync(candidate)) {
                 return candidate;
             }
         }
     }
-    throw httpError(503, 'judge_unavailable', '未找到 oi-judge, 请设置 OI_JUDGE_PATH 或构建 core/build/oi-judge.');
+    throw httpError(503, 'judge_unavailable', '未找到 oi-judge, 请设置 OI_JUDGE_PATH 或重新安装 OI Helper.');
 }
 
 function runProcess(exe, args) {

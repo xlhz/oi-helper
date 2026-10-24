@@ -276,7 +276,8 @@ core/build/oi-judge.exe --serve 8899
 
 - 版本: `extension` / `mcp` / `desktop` / `browser` 均为 `0.1.0`, 对外版本 `V0.1.0-100`, 内核 `GET /health` 同步返回该版本与构建号 `100`.
 - 新增: `desktop` 管理程序 (服务器/凭据/识别到的OIH/接口/工作区/设置、局域网聊天、比赛通知、置顶悬浮窗), `browser` MV3 采集扩展与在线 IDE 面板, `installer` 安装脚本, 扩展侧 5 个编辑器辅助命令, 内核 `GET /health`.
-- 安装: 桌面程序用 `release/v0.1.0-100/OI-Helper-0.1.0-setup.exe` (安装时自动部署编辑器扩展; `resources/` 内已附带 `browser/` 浏览器扩展、扩展 vsix、README 与 docs); 也可单独使用 `extension/oi-helper-0.1.0.vsix` 与 `browser-0.1.0.zip`.
+- 安装: 桌面程序用 `release/v0.1.0-100/OI-Helper-0.1.0-setup.exe` (安装时自动部署编辑器扩展; `resources/` 内已附带 `judge/oi-judge.exe`、`browser/`、扩展 vsix、README 与 docs); 也可单独使用 `extension/oi-helper-0.1.0.vsix` 与 `browser-0.1.0.zip`.
+- 评测文件: `resources/judge/oi-judge.exe` 已静态链接, 不依赖本机 MinGW 运行库; 编辑器扩展会自动从安装目录的 `resources/judge/` 查找, 无需手工配置 `oiHelper.judgePath`.
 - 已知限制: 仅装 VS Code 的机器上的一键安装未验证 (本机仅有 Trae CN); Codeforces / AtCoder 的登录态提交未验证; 榜单事件提醒未在真实比赛中触发. 详见 [docs/desktop-manager-open-issues.md](docs/desktop-manager-open-issues.md).
 
 ## 许可证

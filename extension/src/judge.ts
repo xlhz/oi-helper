@@ -60,21 +60,42 @@ export interface JudgeOptions {
     format?: string;
 }
 
-// 定位 oi-judge: 配置优先, 其次 workspace 下 core/build/
+// 定位 oi-judge: 配置优先, 其次安装目录 resources/judge, 最后 workspace 下 core/build/
 export function resolveJudgePath(): string | undefined {
-    const configured = (vscode.workspace.getConfiguration('oiHelper').get<string>('judgePath') ?? '').trim();
-    if (configured && fs.existsSync(configured)) {
-        return configured;
-    }
     const isWin = process.platform === 'win32';
     const names = isWin ? ['oi-judge.exe', 'oi-judge'] : ['oi-judge', 'oi-judge.exe'];
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    for (const folder of folders) {
+    const candidates: string[] = [];
+
+    const fromEnv = (process.env.OI_JUDGE_PATH ?? '').trim();
+    if (fromEnv) {
+        candidates.push(fromEnv);
+    }
+    const configured = (vscode.workspace.getConfiguration('oiHelper').get<string>('judgePath') ?? '').trim();
+    if (configured) {
+        candidates.push(configured);
+    }
+    for (const folder of vscode.workspace.workspaceFolders ?? []) {
         for (const name of names) {
-            const candidate = path.join(folder.uri.fsPath, 'core', 'build', name);
-            if (fs.existsSync(candidate)) {
-                return candidate;
+            candidates.push(path.join(folder.uri.fsPath, 'core', 'build', name));
+        }
+    }
+    if (isWin) {
+        const bases = [
+            process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs', 'OI Helper') : '',
+            process.env.ProgramFiles ? path.join(process.env.ProgramFiles, 'OI Helper') : '',
+            process.env['ProgramFiles(x86)'] ? path.join(process.env['ProgramFiles(x86)'], 'OI Helper') : '',
+            process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'OI Helper') : ''
+        ].filter(Boolean);
+        for (const base of bases) {
+            for (const name of names) {
+                candidates.push(path.join(base, 'resources', 'judge', name));
+                candidates.push(path.join(base, 'judge', name));
             }
+        }
+    }
+    for (const candidate of candidates) {
+        if (candidate && fs.existsSync(candidate)) {
+            return candidate;
         }
     }
     return configured || undefined;
@@ -82,7 +103,7 @@ export function resolveJudgePath(): string | undefined {
 
 export async function promptJudgePath(): Promise<void> {
     const action = await vscode.window.showErrorMessage(
-        '未找到 oi-judge 可执行文件. 请配置 oiHelper.judgePath, 或将其放在 core/build/ 下.',
+        '未找到 oi-judge 可执行文件. 请安装 OI Helper 桌面程序, 或配置 oiHelper.judgePath 指向 oi-judge.exe.',
         '打开设置'
     );
     if (action === '打开设置') {
