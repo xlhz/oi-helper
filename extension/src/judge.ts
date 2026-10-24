@@ -96,6 +96,7 @@ export function resolveJudgePath(): string | undefined {
                 candidates.push(path.join(base, 'judge', name));
             }
         }
+        candidates.push(...scanInstallDirs(names));
     }
     for (const candidate of candidates) {
         if (candidate && fs.existsSync(candidate)) {
@@ -103,6 +104,40 @@ export function resolveJudgePath(): string | undefined {
         }
     }
     return configured || undefined;
+}
+
+// 安装到自定义目录时, 在常见安装根目录下按名称扫描 resources/judge
+function scanInstallDirs(names: string[]): string[] {
+    const localPrograms = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs') : '';
+    const roots = [
+        localPrograms,
+        process.env.ProgramFiles ?? '',
+        process.env['ProgramFiles(x86)'] ?? ''
+    ].filter(Boolean);
+    const found: string[] = [];
+    for (const root of roots) {
+        let entries: fs.Dirent[];
+        try {
+            entries = fs.readdirSync(root, { withFileTypes: true });
+        } catch {
+            continue;
+        }
+        for (const entry of entries.slice(0, 200)) {
+            if (!entry.isDirectory()) {
+                continue;
+            }
+            if (root !== localPrograms && !/oi|helper/i.test(entry.name)) {
+                continue;
+            }
+            for (const name of names) {
+                const candidate = path.join(root, entry.name, 'resources', 'judge', name);
+                if (fs.existsSync(candidate)) {
+                    found.push(candidate);
+                }
+            }
+        }
+    }
+    return found;
 }
 
 // 找不到 judge 时给出可操作的提示
